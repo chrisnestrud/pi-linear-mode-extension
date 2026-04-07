@@ -1,0 +1,17 @@
+{
+  "name": "pi-linear-mode-extension",
+  "version": "0.1.0",
+  "description": "Extension for a more linear workflow inside the pi CLI with numbered interactions and custom renderers.",
+  "keywords": ["pi", "extension", "linear-mode", "workflow"],
+  "type": "module",
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
