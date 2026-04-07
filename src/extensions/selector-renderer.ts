@@ -1,5 +1,29 @@
-import type { ExtensionAPI, SelectorRenderer, SelectorItem, SelectorOptions } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Container, Text, Spacer } from "@mariozechner/pi-tui";
+import { formatSelectorItem, truncateForScreenReader } from "../lib/formatting.ts";
+
+// Define local types since they might not be exported
+interface SelectorItem {
+  id: string;
+  label: string;
+  description?: string;
+  data?: any;
+}
+
+interface SelectorOptions {
+  title?: string;
+  multiSelect?: boolean;
+  initialSelection?: string;
+  [key: string]: any;
+}
+
+type SelectorRenderer = (
+  items: SelectorItem[],
+  ui: any,
+  onSelect: (selectedId: string, selectedItem?: SelectorItem) => void,
+  onCancel: () => void,
+  options?: SelectorOptions
+) => any;
 
 /**
  * Linear selector component for pi-linear-mode.
@@ -44,26 +68,32 @@ class LinearSelectorComponent extends Container {
       const item = this.items[i];
       const isSelected = i === this.selectedIndex;
       
-      // Number and label
-      const prefix = isSelected ? "> " : "  ";
-      const number = `[${i + 1}]`;
-      const label = item.label.length > 50 ? item.label.substring(0, 47) + "..." : item.label;
-      
-      const line = `${prefix}${number} ${label}`;
+      // Number and label (truncated for screen readers)
+      const truncatedLabel = truncateForScreenReader(item.label, 60);
+      const line = formatSelectorItem(i, truncatedLabel, isSelected);
       this.addChild(new Text(line, 0, 0));
       
-      // Description if available
+      // Description if available (on same line if short)
       if (item.description) {
-        const desc = item.description.length > 60 ? item.description.substring(0, 57) + "..." : item.description;
-        this.addChild(new Text(`      ${desc}`, 0, 0));
+        const truncatedDesc = truncateForScreenReader(item.description, 50);
+        if (truncatedDesc.length <= 50) {
+          // Add to same line
+          this.addChild(new Text(` - ${truncatedDesc}`, 0, 0));
+        } else {
+          // On next line
+          this.addChild(new Text(`    ${truncatedDesc}`, 0, 0));
+        }
       }
       
-      this.addChild(new Spacer(1));
+      // Only add spacer between items, not after last one
+      if (i < this.items.length - 1) {
+        this.addChild(new Spacer(1));
+      }
     }
 
-    // Add instructions
-    this.addChild(new Spacer(1));
-    this.addChild(new Text("Enter number (1-" + this.items.length + ") or press Esc to cancel", 0, 0));
+    // Add instructions (on same line if possible)
+    const instruction = `Enter number (1-${this.items.length}) or press Esc to cancel`;
+    this.addChild(new Text(`[${instruction}]`, 0, 0));
   }
 
   handleKey(key: string): boolean {
@@ -115,11 +145,11 @@ class LinearSelectorComponent extends Container {
  * Replaces the default multi-column selector with a numbered linear interface.
  */
 const linearUserMessageSelectorRenderer: SelectorRenderer = (
-  items,
-  ui,
-  onSelect,
-  onCancel,
-  options
+  items: SelectorItem[],
+  ui: any,
+  onSelect: (selectedId: string, selectedItem?: SelectorItem) => void,
+  onCancel: () => void,
+  options?: SelectorOptions
 ) => {
   return new LinearSelectorComponent(items, onSelect, onCancel, options);
 };
@@ -128,11 +158,11 @@ const linearUserMessageSelectorRenderer: SelectorRenderer = (
  * Linear selector renderer for model selector (/model command).
  */
 const linearModelSelectorRenderer: SelectorRenderer = (
-  items,
-  ui,
-  onSelect,
-  onCancel,
-  options
+  items: SelectorItem[],
+  ui: any,
+  onSelect: (selectedId: string, selectedItem?: SelectorItem) => void,
+  onCancel: () => void,
+  options?: SelectorOptions
 ) => {
   return new LinearSelectorComponent(items, onSelect, onCancel, options);
 };
@@ -141,11 +171,11 @@ const linearModelSelectorRenderer: SelectorRenderer = (
  * Linear selector renderer for session selector (session switching).
  */
 const linearSessionSelectorRenderer: SelectorRenderer = (
-  items,
-  ui,
-  onSelect,
-  onCancel,
-  options
+  items: SelectorItem[],
+  ui: any,
+  onSelect: (selectedId: string, selectedItem?: SelectorItem) => void,
+  onCancel: () => void,
+  options?: SelectorOptions
 ) => {
   return new LinearSelectorComponent(items, onSelect, onCancel, options);
 };
@@ -154,11 +184,11 @@ const linearSessionSelectorRenderer: SelectorRenderer = (
  * Linear selector renderer for OAuth login selector (/login command).
  */
 const linearOAuthLoginSelectorRenderer: SelectorRenderer = (
-  items,
-  ui,
-  onSelect,
-  onCancel,
-  options
+  items: SelectorItem[],
+  ui: any,
+  onSelect: (selectedId: string, selectedItem?: SelectorItem) => void,
+  onCancel: () => void,
+  options?: SelectorOptions
 ) => {
   return new LinearSelectorComponent(items, onSelect, onCancel, options);
 };
@@ -167,11 +197,11 @@ const linearOAuthLoginSelectorRenderer: SelectorRenderer = (
  * Linear selector renderer for OAuth logout selector (/logout command).
  */
 const linearOAuthLogoutSelectorRenderer: SelectorRenderer = (
-  items,
-  ui,
-  onSelect,
-  onCancel,
-  options
+  items: SelectorItem[],
+  ui: any,
+  onSelect: (selectedId: string, selectedItem?: SelectorItem) => void,
+  onCancel: () => void,
+  options?: SelectorOptions
 ) => {
   return new LinearSelectorComponent(items, onSelect, onCancel, options);
 };
@@ -184,25 +214,22 @@ const linearOAuthLogoutSelectorRenderer: SelectorRenderer = (
  */
 export default function selectorRendererExtension(pi: ExtensionAPI) {
   // Register linear renderer for user-message selector (/fork command)
-  pi.registerSelectorRenderer("user-message", linearUserMessageSelectorRenderer);
+  (pi as any).registerSelectorRenderer("user-message", linearUserMessageSelectorRenderer);
   
   // Register linear renderer for model selector (/model command)
-  pi.registerSelectorRenderer("model", linearModelSelectorRenderer);
+  (pi as any).registerSelectorRenderer("model", linearModelSelectorRenderer);
   
   // Register linear renderer for session selector (session switching)
-  pi.registerSelectorRenderer("session", linearSessionSelectorRenderer);
+  (pi as any).registerSelectorRenderer("session", linearSessionSelectorRenderer);
   
   // Register linear renderer for OAuth selectors
-  pi.registerSelectorRenderer("oauth-login", linearOAuthLoginSelectorRenderer);
-  pi.registerSelectorRenderer("oauth-logout", linearOAuthLogoutSelectorRenderer);
+  (pi as any).registerSelectorRenderer("oauth-login", linearOAuthLoginSelectorRenderer);
+  (pi as any).registerSelectorRenderer("oauth-logout", linearOAuthLogoutSelectorRenderer);
   
-  // Log extension load for debugging
+  // Optional UI notification in interactive sessions
   pi.on("session_start", async (_event, ctx) => {
-    console.error("[pi-linear-mode] Selector renderers registered for: user-message, model, session, oauth-login, oauth-logout");
-    
-    // Optional UI notification in interactive sessions
     if (ctx.hasUI) {
-      ctx.ui.notify("Linear selector rendering enabled for multiple commands", "info");
+      ctx.ui.notify("[Linear selector rendering enabled]", "info");
     }
   });
 }

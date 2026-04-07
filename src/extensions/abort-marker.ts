@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { state } from "../lib/state.js";
+import { state } from "../lib/state.ts";
 
 function fingerprintFromMessage(message: { timestamp?: number; errorMessage?: string }): string {
   return `${message.timestamp ?? 0}:${message.errorMessage ?? "aborted"}`;

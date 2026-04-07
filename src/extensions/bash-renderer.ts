@@ -1,5 +1,17 @@
-import type { ExtensionAPI, BashRenderer, BashComponent, TruncationResult } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Container, Text, Spacer } from "@mariozechner/pi-tui";
+import { formatCommand, formatStatus, truncateForScreenReader } from "../lib/formatting.ts";
+
+// Define local types since they might not be exported
+interface BashComponent {
+  appendOutput(chunk: string): void;
+  setComplete(exitCode: number | undefined, cancelled: boolean, truncationResult?: any, fullOutputPath?: string): void;
+  setExpanded(expanded: boolean): void;
+}
+
+type BashRenderer = (command: string, ui: any, excludeFromContext?: boolean) => BashComponent;
+
+type TruncationResult = any;
 
 /**
  * Linear bash component for pi-linear-mode.
@@ -33,23 +45,18 @@ class LinearBashComponent extends Container implements BashComponent {
   private renderInitial(): void {
     this.clear();
     
-    // Command line
-    const prefix = this.excludeFromContext ? "# " : "$ ";
-    this.addChild(new Text(`${prefix}${this.command}`, 0, 0));
-    
-    // Status (no spinner)
+    // Command line with status on same line
     const statusText = this.status === "running" ? "Running..." : 
                       this.status === "cancelled" ? "Cancelled" :
                       this.status === "error" ? `Error (exit ${this.exitCode})` : "Done";
-    this.addChild(new Text(`  ${statusText}`, 0, 0));
+    
+    const commandLine = formatCommand(this.command, this.excludeFromContext);
+    const fullLine = `${commandLine} ${statusText}`;
+    this.addChild(new Text(fullLine, 0, 0));
   }
 
   private renderComplete(): void {
     this.clear();
-    
-    // Command line
-    const prefix = this.excludeFromContext ? "# " : "$ ";
-    this.addChild(new Text(`${prefix}${this.command}`, 0, 0));
     
     // Build status line
     let statusLine: string;
@@ -68,23 +75,26 @@ class LinearBashComponent extends Container implements BashComponent {
       statusLine += ` (${this.outputLines.length} line${this.outputLines.length === 1 ? '' : 's'})`;
     }
     
-    this.addChild(new Text(`  ${statusLine}`, 0, 0));
+    // Command line with status on same line
+    const commandLine = formatCommand(this.command, this.excludeFromContext);
+    const fullLine = `${commandLine} ${statusLine}`;
+    this.addChild(new Text(fullLine, 0, 0));
     
     // Show output preview if we have output (like pi's default behavior)
     if (this.outputLines.length > 0) {
-      this.addChild(new Spacer(1));
-      
-      // Show last 10 lines as preview (similar to pi's default preview)
-      const linesToShow = Math.min(this.outputLines.length, 10);
+      // Show last 5 lines as preview (reduced for screen readers)
+      const linesToShow = Math.min(this.outputLines.length, 5);
       const startIndex = Math.max(0, this.outputLines.length - linesToShow);
       
       for (let i = startIndex; i < this.outputLines.length; i++) {
-        this.addChild(new Text(`  ${this.outputLines[i]}`, 0, 0));
+        // Truncate long lines for screen readers
+        const truncatedLine = truncateForScreenReader(this.outputLines[i]);
+        this.addChild(new Text(`  ${truncatedLine}`, 0, 0));
       }
       
       // Only show "... x more lines" if there are lines not shown
-      if (this.outputLines.length > 10) {
-        this.addChild(new Text(`  ... ${this.outputLines.length - 10} more lines`, 0, 0));
+      if (this.outputLines.length > 5) {
+        this.addChild(new Text(`  ... ${this.outputLines.length - 5} more lines`, 0, 0));
       }
       
       if (this.truncationResult?.truncated) {
@@ -151,16 +161,12 @@ const linearBashRenderer: BashRenderer = (command, ui, excludeFromContext) => {
  */
 export default function bashRendererExtension(pi: ExtensionAPI) {
   // Register our linear bash renderer
-  pi.registerBashRenderer(linearBashRenderer);
+  (pi as any).registerBashRenderer(linearBashRenderer);
   
-  // Log extension load for debugging
+  // Optional UI notification in interactive sessions
   pi.on("session_start", async (_event, ctx) => {
-    // Log to stderr for test verification
-    console.error("[pi-linear-mode] Bash renderer registered");
-    
-    // Optional UI notification in interactive sessions
     if (ctx.hasUI) {
-      ctx.ui.notify("Linear bash rendering enabled", "info");
+      ctx.ui.notify("[Linear bash rendering enabled]", "info");
     }
   });
 }

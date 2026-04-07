@@ -4,8 +4,8 @@ import {
   discardInteractionsForSessionChange,
   publishActiveInteraction,
   resolveActiveInteraction,
-} from "../lib/interactions.js";
-import { resetEphemeralState, state } from "../lib/state.js";
+} from "../lib/interactions.ts";
+import { resetEphemeralState, state } from "../lib/state.ts";
 
 function isBareNumber(text: string): boolean {
   return /^\d+$/.test(text.trim());
@@ -40,7 +40,7 @@ export default function interactionManager(pi: ExtensionAPI) {
     const selectedIndex = Number.parseInt(text, 10) - 1;
     const selected = active.options[selectedIndex];
     if (!selected) {
-      ctx.ui.notify(`Invalid selection: ${text}`, "warning");
+      ctx.ui.notify(`[Invalid selection: ${text}]`, "warning");
       publishActiveInteraction(pi, { force: true });
       return { action: "handled" };
     }

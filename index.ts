@@ -15,15 +15,16 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 // Import all extensions
-import interactionManager from "./src/extensions/interaction-manager.js";
-import abortMarker from "./src/extensions/abort-marker.js";
-import numberedInteractions from "./src/extensions/numbered-interactions.js";
-import tuiCompat from "./src/extensions/tui-compat.js";
-import toolRenderers from "./src/extensions/tool-renderers.js";
-import messageRenderers from "./src/extensions/message-renderers.js";
-import bashRenderer from "./src/extensions/bash-renderer.js";
-import selectorRenderer from "./src/extensions/selector-renderer.js";
-import workingMessageSuppressor from "./src/extensions/working-message-suppressor.js";
+import interactionManager from "./src/extensions/interaction-manager.ts";
+import abortMarker from "./src/extensions/abort-marker.ts";
+import numberedInteractions from "./src/extensions/numbered-interactions.ts";
+import tuiCompat from "./src/extensions/tui-compat.ts";
+import toolRenderers from "./src/extensions/tool-renderers.ts";
+import messageRenderers from "./src/extensions/message-renderers.ts";
+import bashRenderer from "./src/extensions/bash-renderer.ts";
+import selectorRenderer from "./src/extensions/selector-renderer.ts";
+import workingMessageModifier from "./src/extensions/working-message-modifier.ts";
+import footerSuppressor from "./src/extensions/footer-suppressor.ts";
 
 export default function piLinearModeExtension(pi: ExtensionAPI) {
   // Register all extensions in order
@@ -35,10 +36,11 @@ export default function piLinearModeExtension(pi: ExtensionAPI) {
   messageRenderers(pi);
   bashRenderer(pi);
   selectorRenderer(pi);
-  workingMessageSuppressor(pi);
+  workingMessageModifier(pi);
+  footerSuppressor(pi);
   
   // Notify that extension is loaded
   pi.on("session_start", async (_event, ctx) => {
-    ctx.ui.notify("pi-linear-mode extension loaded", "info");
+    ctx.ui.notify("[pi-linear-mode extension loaded]", "info");
   });
 }

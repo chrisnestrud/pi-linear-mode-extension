@@ -1,11 +1,11 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { cancelInteractionForNormalHandoff } from "../lib/interactions.js";
-import { resetEphemeralState, state } from "../lib/state.js";
+import { cancelInteractionForNormalHandoff } from "../lib/interactions.ts";
+import { resetEphemeralState, state } from "../lib/state.ts";
 
 function warnOnce(ctx: ExtensionContext, key: string, message: string) {
   if (state.unsupportedWarnings.has(key)) return;
   state.unsupportedWarnings.add(key);
-  ctx.ui.notify(message, "error");
+  ctx.ui.notify(`[${message}]`, "error");
 }
 
 export default function tuiCompat(pi: ExtensionAPI) {
@@ -27,7 +27,7 @@ export default function tuiCompat(pi: ExtensionAPI) {
           queuedInteractions: state.queuedInteractions.length,
         },
       });
-      ctx.ui.notify(content, "info");
+      ctx.ui.notify(`[${content}]`, "info");
     },
   });
 
@@ -37,13 +37,13 @@ export default function tuiCompat(pi: ExtensionAPI) {
       const entries = ctx.sessionManager.getEntries();
       const latestUserEntry = [...entries].reverse().find((entry) => entry.type === "message" && entry.message.role === "user");
       if (!latestUserEntry) {
-        ctx.ui.notify("No user message available to fork from", "error");
+        ctx.ui.notify("[No user message available to fork from]", "error");
         return;
       }
 
       const result = await ctx.fork(latestUserEntry.id);
       if (result.cancelled) {
-        ctx.ui.notify("Fork cancelled", "warning");
+        ctx.ui.notify("[Fork cancelled]", "warning");
         return;
       }
 
@@ -65,7 +65,7 @@ export default function tuiCompat(pi: ExtensionAPI) {
       const currentSessionFile = ctx.sessionManager.getSessionFile();
       const hadActiveInteraction = Boolean(state.activeInteraction);
       if (!currentSessionFile) {
-        ctx.ui.notify("No current session file available to switch back to", "error");
+        ctx.ui.notify("[No current session file available to switch back to]", "error");
         return;
       }
 
@@ -76,14 +76,14 @@ export default function tuiCompat(pi: ExtensionAPI) {
         },
       });
       if (newResult.cancelled) {
-        ctx.ui.notify("Session switch test cancelled while creating a fresh session", "warning");
+        ctx.ui.notify("[Session switch test cancelled while creating a fresh session]", "warning");
         return;
       }
       resetEphemeralState();
 
       const switchResult = await ctx.switchSession(currentSessionFile);
       if (switchResult.cancelled) {
-        ctx.ui.notify("Switch back to the original session was cancelled", "warning");
+        ctx.ui.notify("[Switch back to the original session was cancelled]", "warning");
         return;
       }
       resetEphemeralState();

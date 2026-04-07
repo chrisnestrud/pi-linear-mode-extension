@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { promoteNextInteraction, state, type ActiveInteraction, type ActiveInteractionOption } from "./state.js";
+import { promoteNextInteraction, state, type ActiveInteraction, type ActiveInteractionOption } from "./state.ts";
 
 export interface EnqueueInteractionInput {
   title: string;

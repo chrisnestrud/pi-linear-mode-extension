@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
+import { formatCustomMessage } from "../lib/formatting.ts";
 
 function renderContent(content: unknown): string {
   if (typeof content === "string") return content;
@@ -11,7 +12,7 @@ function renderContent(content: unknown): string {
     .join("\n");
 }
 
-function renderWithOptionalDetails(content: string, expanded: boolean, details: unknown, theme: { fg: (name: string, text: string) => string }): string {
+function renderWithOptionalDetails(content: string, expanded: boolean, details: unknown, theme: any): string {
   if (!expanded || details === undefined) return content;
   return `${content}\n${theme.fg("dim", JSON.stringify(details, null, 2))}`;
 }
@@ -21,10 +22,13 @@ export default function messageRenderers(pi: ExtensionAPI) {
     "linear-workflow/interaction",
     "linear-workflow/status",
     "linear-workflow/abort",
+    "footer-snapshot",
+    "footer-status",
   ]) {
     pi.registerMessageRenderer(customType, (message, options, theme) => {
       const content = renderContent(message.content);
-      return new Text(renderWithOptionalDetails(content, options.expanded, message.details, theme), 0, 0);
+      const formattedContent = formatCustomMessage(customType, content);
+      return new Text(renderWithOptionalDetails(formattedContent, options.expanded, message.details, theme), 0, 0);
     });
   }
 }
