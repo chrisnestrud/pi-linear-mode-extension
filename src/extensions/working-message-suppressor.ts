@@ -14,6 +14,8 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
  * message again on `turn_start` and `agent_start` events.
  */
 export default function workingMessageSuppressor(pi: ExtensionAPI) {
+  console.error(`[pi-linear-mode] workingMessageSuppressor extension loading`);
+  
   // With our fix to pi, empty string ("") will hide the loader
   // We'll use empty string to completely suppress the "⠋ Working..." spinner
   const hideMessage = "";
@@ -22,22 +24,26 @@ export default function workingMessageSuppressor(pi: ExtensionAPI) {
   let workingMessageSet = false;
   
   function setMinimalWorkingMessage(ctx: any) {
+    console.error(`[pi-linear-mode] setMinimalWorkingMessage called`);
     ctx.ui.setWorkingMessage(hideMessage);
     workingMessageSet = true;
     console.error(`[pi-linear-mode] Working message set to empty string (hiding loader)`);
   }
   
   pi.on("session_start", async (_event, ctx) => {
+    console.error(`[pi-linear-mode] session_start event`);
     setMinimalWorkingMessage(ctx);
   });
 
   pi.on("agent_start", async (_event, ctx) => {
+    console.error(`[pi-linear-mode] agent_start event, workingMessageSet=${workingMessageSet}`);
     if (!workingMessageSet) {
       setMinimalWorkingMessage(ctx);
     }
   });
 
   pi.on("turn_start", async (_event, ctx) => {
+    console.error(`[pi-linear-mode] turn_start event (text sent to LLM)`);
     // Set working message when a turn starts (when text is sent to LLM)
     setMinimalWorkingMessage(ctx);
   });
