@@ -23,6 +23,7 @@ import toolRenderers from "./src/extensions/tool-renderers.js";
 import messageRenderers from "./src/extensions/message-renderers.js";
 import bashRenderer from "./src/extensions/bash-renderer.js";
 import selectorRenderer from "./src/extensions/selector-renderer.js";
+import workingMessageSuppressor from "./src/extensions/working-message-suppressor.js";
 
 export default function piLinearModeExtension(pi: ExtensionAPI) {
   // Register all extensions in order
@@ -34,6 +35,7 @@ export default function piLinearModeExtension(pi: ExtensionAPI) {
   messageRenderers(pi);
   bashRenderer(pi);
   selectorRenderer(pi);
+  workingMessageSuppressor(pi);
   
   // Notify that extension is loaded
   pi.on("session_start", async (_event, ctx) => {
