@@ -23,10 +23,60 @@ vi.mock('@mariozechner/pi-tui', () => {
     constructor(public height: number) {}
   }
 
+  class MockInput {
+    private value = '';
+    getValue() {
+      return this.value;
+    }
+    setValue(value: string) {
+      this.value = value;
+    }
+    handleInput(data: string) {
+      if (data === '\u0015') {
+        this.value = '';
+        return;
+      }
+      if (data === '\u0017') {
+        let end = this.value.length;
+        while (end > 0 && /\s/.test(this.value[end - 1]!)) end--;
+        let start = end;
+        while (start > 0 && !/\s/.test(this.value[start - 1]!)) start--;
+        this.value = this.value.slice(0, start);
+        return;
+      }
+      if (data === 'Backspace') {
+        this.value = this.value.slice(0, -1);
+        return;
+      }
+      if (data.length === 1 && data >= ' ' && data !== '\u007f') {
+        this.value += data;
+      }
+    }
+  }
+
+  function mockFuzzyFilter<T>(items: T[], query: string, getText: (item: T) => string): T[] {
+    if (!query.trim()) return items;
+    const tokens = query.trim().toLowerCase().split(/\s+/);
+    return items
+      .map((item) => ({ item, text: getText(item).toLowerCase() }))
+      .filter(({ text }) => tokens.every((token) => {
+        let index = 0;
+        for (const char of token) {
+          index = text.indexOf(char, index);
+          if (index === -1) return false;
+          index++;
+        }
+        return true;
+      }))
+      .map(({ item }) => item);
+  }
+
   return {
     Container: MockContainer,
     Text: MockText,
     Spacer: MockSpacer,
+    Input: MockInput,
+    fuzzyFilter: mockFuzzyFilter,
   };
 });
 

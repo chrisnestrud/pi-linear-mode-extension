@@ -1,12 +1,6 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Container, Text, Spacer } from "@mariozechner/pi-tui";
+import { Container, Text, Spacer, Input, fuzzyFilter } from "@mariozechner/pi-tui";
 import { formatSelectorItem } from "../lib/formatting.ts";
-
-interface FuzzyMatch {
-  matches: boolean;
-  score: number;
-  indices: number[];
-}
 
 interface SelectorItem {
   id: string;
@@ -30,112 +24,41 @@ type SelectorRenderer = (
   options?: SelectorOptions,
 ) => any;
 
-function fuzzyMatch(query: string, text: string): FuzzyMatch {
-  const queryLower = query.toLowerCase();
+function findTokenMatchIndices(token: string, text: string): number[] {
+  const tokenLower = token.toLowerCase();
   const textLower = text.toLowerCase();
+  const indices: number[] = [];
+  let queryIndex = 0;
 
-  const matchQuery = (normalizedQuery: string): FuzzyMatch => {
-    if (normalizedQuery.length === 0) {
-      return { matches: true, score: 0, indices: [] };
+  for (let i = 0; i < textLower.length && queryIndex < tokenLower.length; i++) {
+    if (textLower[i] === tokenLower[queryIndex]) {
+      indices.push(i);
+      queryIndex++;
     }
-
-    if (normalizedQuery.length > textLower.length) {
-      return { matches: false, score: 0, indices: [] };
-    }
-
-    let queryIndex = 0;
-    let score = 0;
-    let lastMatchIndex = -1;
-    let consecutiveMatches = 0;
-    const indices: number[] = [];
-
-    for (let i = 0; i < textLower.length && queryIndex < normalizedQuery.length; i++) {
-      if (textLower[i] === normalizedQuery[queryIndex]) {
-        const isWordBoundary = i === 0 || /[\s\-_./:]/.test(textLower[i - 1]!);
-
-        if (lastMatchIndex === i - 1) {
-          consecutiveMatches++;
-          score -= consecutiveMatches * 5;
-        } else {
-          consecutiveMatches = 0;
-          if (lastMatchIndex >= 0) {
-            score += (i - lastMatchIndex - 1) * 2;
-          }
-        }
-
-        if (isWordBoundary) {
-          score -= 10;
-        }
-
-        score += i * 0.1;
-        lastMatchIndex = i;
-        indices.push(i);
-        queryIndex++;
-      }
-    }
-
-    if (queryIndex < normalizedQuery.length) {
-      return { matches: false, score: 0, indices: [] };
-    }
-
-    return { matches: true, score, indices };
-  };
-
-  const primaryMatch = matchQuery(queryLower);
-  if (primaryMatch.matches) {
-    return primaryMatch;
   }
 
-  const alphaNumericMatch = queryLower.match(/^(?<letters>[a-z]+)(?<digits>[0-9]+)$/);
-  const numericAlphaMatch = queryLower.match(/^(?<digits>[0-9]+)(?<letters>[a-z]+)$/);
-  const swappedQuery = alphaNumericMatch
-    ? `${alphaNumericMatch.groups?.digits ?? ""}${alphaNumericMatch.groups?.letters ?? ""}`
-    : numericAlphaMatch
-      ? `${numericAlphaMatch.groups?.letters ?? ""}${numericAlphaMatch.groups?.digits ?? ""}`
-      : "";
-
-  if (!swappedQuery) {
-    return primaryMatch;
-  }
-
-  const swappedMatch = matchQuery(swappedQuery);
-  if (!swappedMatch.matches) {
-    return primaryMatch;
-  }
-
-  return { matches: true, score: swappedMatch.score + 5, indices: swappedMatch.indices };
+  return queryIndex === tokenLower.length ? indices : [];
 }
 
-function fuzzyMatchWithTokens(query: string, text: string): FuzzyMatch {
+function findHighlightIndices(query: string, text: string): number[] {
   const tokens = query
     .trim()
     .split(/\s+/)
     .filter((token) => token.length > 0);
 
-  if (tokens.length === 0) {
-    return { matches: true, score: 0, indices: [] };
-  }
-
-  let totalScore = 0;
-  const combinedIndices = new Set<number>();
-
+  const indices = new Set<number>();
   for (const token of tokens) {
-    const match = fuzzyMatch(token, text);
-    if (!match.matches) {
-      return { matches: false, score: 0, indices: [] };
+    const tokenIndices = findTokenMatchIndices(token, text);
+    if (tokenIndices.length === 0) {
+      return [];
     }
 
-    totalScore += match.score;
-    for (const index of match.indices) {
-      combinedIndices.add(index);
+    for (const index of tokenIndices) {
+      indices.add(index);
     }
   }
 
-  return {
-    matches: true,
-    score: totalScore,
-    indices: [...combinedIndices].sort((a, b) => a - b),
-  };
+  return [...indices].sort((a, b) => a - b);
 }
 
 function highlightMatches(text: string, indices: number[]): string {
@@ -173,7 +96,7 @@ class LinearSelectorComponent extends Container {
   private onCancel: () => void;
   private options?: SelectorOptions;
   private selectedIndex = 0;
-  private filterQuery = "";
+  private filterInput = new Input();
 
   constructor(
     items: SelectorItem[],
@@ -186,7 +109,12 @@ class LinearSelectorComponent extends Container {
     this.onSelect = onSelect;
     this.onCancel = onCancel;
     this.options = options;
+    this.filterInput.setValue("");
     this.renderSelector();
+  }
+
+  private get filterQuery(): string {
+    return this.filterInput.getValue();
   }
 
   private getItemSearchText(item: SelectorItem): string {
@@ -196,15 +124,12 @@ class LinearSelectorComponent extends Container {
   }
 
   private getVisibleItems(): SelectorItem[] {
-    if (!this.filterQuery.trim()) {
+    const query = this.filterQuery.trim();
+    if (!query) {
       return this.items;
     }
 
-    return this.items
-      .map((item) => ({ item, match: fuzzyMatchWithTokens(this.filterQuery, this.getItemSearchText(item)) }))
-      .filter((entry) => entry.match.matches)
-      .sort((a, b) => a.match.score - b.match.score)
-      .map((entry) => entry.item);
+    return fuzzyFilter(this.items, query, (item) => this.getItemSearchText(item));
   }
 
   private clampSelection(): void {
@@ -219,33 +144,9 @@ class LinearSelectorComponent extends Container {
     }
   }
 
-  private isPrintableCharacter(key: string): boolean {
-    return key.length === 1 && key >= " " && key !== "\u007f";
-  }
-
   private clearFilter(): void {
-    this.filterQuery = "";
+    this.filterInput.setValue("");
     this.selectedIndex = 0;
-  }
-
-  private deleteFilterWordBackward(): boolean {
-    if (this.filterQuery.length === 0) {
-      return false;
-    }
-
-    let end = this.filterQuery.length;
-    while (end > 0 && /\s/.test(this.filterQuery[end - 1]!)) {
-      end--;
-    }
-
-    let start = end;
-    while (start > 0 && !/\s/.test(this.filterQuery[start - 1]!)) {
-      start--;
-    }
-
-    this.filterQuery = this.filterQuery.slice(0, start);
-    this.selectedIndex = 0;
-    return true;
   }
 
   private getHighlightedLabel(item: SelectorItem): string {
@@ -253,12 +154,12 @@ class LinearSelectorComponent extends Container {
       return item.label;
     }
 
-    const match = fuzzyMatchWithTokens(this.filterQuery, item.label);
-    if (!match.matches) {
+    const indices = findHighlightIndices(this.filterQuery, item.label);
+    if (indices.length === 0) {
       return item.label;
     }
 
-    return highlightMatches(item.label, match.indices);
+    return highlightMatches(item.label, indices);
   }
 
   private renderSelector(): void {
@@ -310,37 +211,6 @@ class LinearSelectorComponent extends Container {
       return true;
     }
 
-    if (key === "\u0015") {
-      if (!this.filterQuery) {
-        return false;
-      }
-
-      this.clearFilter();
-      this.renderSelector();
-      return true;
-    }
-
-    if (key === "\u0017") {
-      const changed = this.deleteFilterWordBackward();
-      if (!changed) {
-        return false;
-      }
-
-      this.renderSelector();
-      return true;
-    }
-
-    if (key === "Backspace") {
-      if (this.filterQuery.length === 0) {
-        return false;
-      }
-
-      this.filterQuery = this.filterQuery.slice(0, -1);
-      this.selectedIndex = 0;
-      this.renderSelector();
-      return true;
-    }
-
     if ((key === "ArrowUp" || key === "k") && visibleItems.length > 0) {
       this.selectedIndex = this.selectedIndex > 0 ? this.selectedIndex - 1 : visibleItems.length - 1;
       this.renderSelector();
@@ -362,14 +232,7 @@ class LinearSelectorComponent extends Container {
       }
     }
 
-    if (key === " " && this.filterQuery.length > 0) {
-      this.filterQuery += key;
-      this.selectedIndex = 0;
-      this.renderSelector();
-      return true;
-    }
-
-    if (key === "Enter" || key === " ") {
+    if (key === "Enter" || (key === " " && this.filterQuery.length === 0)) {
       const item = visibleItems[this.selectedIndex];
       if (!item) {
         return true;
@@ -379,10 +242,21 @@ class LinearSelectorComponent extends Container {
       return true;
     }
 
-    if (this.isPrintableCharacter(key)) {
-      this.filterQuery += key;
+    const before = this.filterQuery;
+    this.filterInput.handleInput(key);
+    if (this.filterQuery !== before) {
       this.selectedIndex = 0;
       this.renderSelector();
+      return true;
+    }
+
+    if (key === " ") {
+      const item = visibleItems[this.selectedIndex];
+      if (!item) {
+        return true;
+      }
+
+      this.onSelect(item.id, item);
       return true;
     }
 
