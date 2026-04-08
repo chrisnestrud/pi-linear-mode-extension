@@ -129,6 +129,20 @@ describe('working-message-modifier extension', () => {
     expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
+
+  it('should no-op when UI is unavailable during set', async () => {
+    const handler = eventHandlers.get('turn_start');
+    await handler!({}, { ...mockCtx, hasUI: false });
+    expect(mockSetWorkingMessage).not.toHaveBeenCalled();
+    expect(mockSetWidget).not.toHaveBeenCalled();
+  });
+
+  it('should no-op when UI is unavailable during clear', async () => {
+    const handler = eventHandlers.get('agent_end');
+    await handler!({}, { ...mockCtx, hasUI: false });
+    expect(mockSetWorkingMessage).not.toHaveBeenCalled();
+    expect(mockSetWidget).not.toHaveBeenCalled();
+  });
   
   describe('timeout behavior', () => {
     it('should clear previous timeout when setting new working message', async () => {

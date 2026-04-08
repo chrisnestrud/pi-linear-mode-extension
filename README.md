@@ -8,7 +8,6 @@ A pi extension that provides a more linear workflow inside the pi CLI with numbe
 - **Custom Tool Renderers**: Linear display of tool calls and results
 - **Selector Renderer**: Interactive selection UI for choosing options
 - **Message Renderers**: Custom display for different message types
-- **TUI Compatibility**: Compatibility layer for TUI interactions
 - **Screen Reader Accessibility**: All UI elements marked with `[` and `]` brackets
 - **Footer Suppression**: Option to suppress frequently updating footer for screen readers
 - **Working Message**: Clear `[Working...]` feedback during LLM processing
@@ -72,8 +71,8 @@ npm run test:ui    # Run tests with UI
 
 Tests are located in the `test/` directory and include:
 - Formatting utilities (`formatting.test.ts`)
-- Interaction utilities (`interactions.test.ts`)
 - Extension loading (`index.test.ts`)
+- Renderer and accessibility behavior tests
 
 ## License
 

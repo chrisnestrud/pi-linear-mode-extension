@@ -20,6 +20,9 @@ export default function workingMessageModifier(pi: ExtensionAPI) {
   
   function setWorkingMessage(ctx: any) {
     try {
+      if (ctx.hasUI === false) {
+        return;
+      }
       // Suppress pi's built-in loader/spinner entirely.
       // In pi core, an empty string hides the loader, while any non-empty string
       // still renders the animated braille spinner.
@@ -47,6 +50,9 @@ export default function workingMessageModifier(pi: ExtensionAPI) {
   
   function clearWorkingMessage(ctx: any) {
     try {
+      if (ctx.hasUI === false) {
+        return;
+      }
       // Keep the built-in loader hidden so the animated spinner never appears.
       ctx.ui.setWorkingMessage("");
       ctx.ui.setWidget(workingWidgetKey, undefined);

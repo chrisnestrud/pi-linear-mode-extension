@@ -55,17 +55,20 @@ export default function footerSuppressorSimple(pi: ExtensionAPI) {
     description: "Show current footer status",
     handler: async (_args, ctx: ExtensionCommandContext) => {
       try {
+        if (!(ctx as any).hasUI && (ctx as any).hasUI !== undefined) {
+          return;
+        }
+
         const modelName = ctx.model?.id || "no-model";
-        const provider = ctx.model?.provider || "";
-        
+
         // Get context usage if available
         const contextUsage = (ctx as any).session?.getContextUsage?.();
         const contextWindow = contextUsage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
         const contextPercent = contextUsage?.percent ?? 0;
         const contextPercentStr = contextPercent !== null ? contextPercent.toFixed(1) : "?";
-        
-        const statusLine = `${contextPercentStr}%/${contextWindow}k ${modelName}`;
-        
+
+        const statusLine = `Footer: context ${contextPercentStr} percent of ${contextWindow}k, model ${modelName}`;
+
         ctx.ui.notify(`[${statusLine}]`, "info");
       } catch (error) {
         ctx.ui.notify(`[Error getting footer status: ${error}]`, "error");

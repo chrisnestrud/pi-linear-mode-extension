@@ -40,7 +40,7 @@ function renderContentBlock(
   hiddenLabel: string,
   expanded: boolean,
 ): string {
-  const parts: string[] = [formatStatus(statusLine), callLine];
+  const parts: string[] = [`${callLine} ${formatStatus(statusLine)}`];
 
   if (lines.length === 0) {
     return parts.join("\n");
@@ -87,13 +87,13 @@ export default function toolRenderers(pi: ExtensionAPI) {
     renderResult(result, { isPartial, expanded }, _theme, context) {
       const callLine = formatToolCall("read", context?.args ?? {});
       if (isPartial) {
-        return new Text(`${formatStatus("Reading...")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Reading...")}`, 0, 0);
       }
 
       const details = result.details as ReadToolDetails | undefined;
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(`${formatStatus("Read complete")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Read complete")}`, 0, 0);
       }
 
       const lines = content.text.split("\n");
@@ -124,7 +124,7 @@ export default function toolRenderers(pi: ExtensionAPI) {
         excludeFromContext: toolArgs.excludeFromContext || false,
       });
       if (isPartial) {
-        return new Text(`${formatStatus("Running...")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Running...")}`, 0, 0);
       }
 
       const details = result.details as BashToolDetails | undefined;
@@ -161,7 +161,7 @@ export default function toolRenderers(pi: ExtensionAPI) {
     renderResult(_result, { isPartial }, _theme, context) {
       const callLine = formatToolCall("write", context?.args ?? {});
       const statusLine = isPartial ? "Writing..." : "Done";
-      return new Text(`${formatStatus(statusLine)}\n${callLine}`, 0, 0);
+      return new Text(`${callLine} ${formatStatus(statusLine)}`, 0, 0);
     },
   });
 
@@ -180,12 +180,12 @@ export default function toolRenderers(pi: ExtensionAPI) {
     renderResult(result, { isPartial, expanded }, _theme, context) {
       const callLine = formatToolCall("edit", context?.args ?? {});
       if (isPartial) {
-        return new Text(`${formatStatus("Editing...")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Editing...")}`, 0, 0);
       }
 
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(`${formatStatus("Edit complete")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Edit complete")}`, 0, 0);
       }
 
       const diffLines = visibleDiffLines(content.text);
@@ -210,12 +210,12 @@ export default function toolRenderers(pi: ExtensionAPI) {
     renderResult(result, { isPartial, expanded }, _theme, context) {
       const callLine = formatToolCall("find", context?.args ?? {});
       if (isPartial) {
-        return new Text(`${formatStatus("Finding...")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Finding...")}`, 0, 0);
       }
 
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(`${formatStatus("Find complete")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Find complete")}`, 0, 0);
       }
 
       const lines = nonEmptyLines(content.text);
@@ -239,12 +239,12 @@ export default function toolRenderers(pi: ExtensionAPI) {
     renderResult(result, { isPartial, expanded }, _theme, context) {
       const callLine = formatToolCall("grep", context?.args ?? {});
       if (isPartial) {
-        return new Text(`${formatStatus("Grepping...")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Grepping...")}`, 0, 0);
       }
 
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(`${formatStatus("Grep complete")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Grep complete")}`, 0, 0);
       }
 
       const lines = nonEmptyLines(content.text);
@@ -268,12 +268,12 @@ export default function toolRenderers(pi: ExtensionAPI) {
     renderResult(result, { isPartial, expanded }, _theme, context) {
       const callLine = formatToolCall("ls", context?.args ?? {});
       if (isPartial) {
-        return new Text(`${formatStatus("Listing...")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("Listing...")}`, 0, 0);
       }
 
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(`${formatStatus("List complete")}\n${callLine}`, 0, 0);
+        return new Text(`${callLine} ${formatStatus("List complete")}`, 0, 0);
       }
 
       const lines = nonEmptyLines(content.text);

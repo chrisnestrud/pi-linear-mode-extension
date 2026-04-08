@@ -147,13 +147,13 @@ describe('footer-suppressor extension', () => {
   describe('footer-status command', () => {
     it('should show footer status with context usage', async () => {
       await footerStatusHandler!({}, mockCtx);
-      expect(mockUi.notify).toHaveBeenCalledWith('[25.5%/128k test-model]', 'info');
+      expect(mockUi.notify).toHaveBeenCalledWith('[Footer: context 25.5 percent of 128k, model test-model]', 'info');
     });
     
     it('should handle missing context usage', async () => {
       mockSession.getContextUsage.mockReturnValue(null);
       await footerStatusHandler!({}, mockCtx);
-      expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/128k test-model]', 'info');
+      expect(mockUi.notify).toHaveBeenCalledWith('[Footer: context 0.0 percent of 128k, model test-model]', 'info');
     });
 
     it('should handle null context percent', async () => {
@@ -162,7 +162,7 @@ describe('footer-suppressor extension', () => {
         percent: null,
       });
       await footerStatusHandler!({}, mockCtx);
-      expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/128k test-model]', 'info');
+      expect(mockUi.notify).toHaveBeenCalledWith('[Footer: context 0.0 percent of 128k, model test-model]', 'info');
     });
 
     it('should handle string context percent without calling toFixed', async () => {
@@ -179,14 +179,14 @@ describe('footer-suppressor extension', () => {
       // Ensure getContextUsage returns null to test fallback
       mockSession.getContextUsage.mockReturnValue(null);
       await footerStatusHandler!({}, ctxWithoutModel);
-      expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/0k no-model]', 'info');
+      expect(mockUi.notify).toHaveBeenCalledWith('[Footer: context 0.0 percent of 0k, model no-model]', 'info');
     });
     
     it('should handle missing session', async () => {
       const ctxWithoutSession = { ...mockCtx, session: undefined };
       await footerStatusHandler!({}, ctxWithoutSession);
       // getContextUsage will be undefined, contextWindow from model
-      expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/128k test-model]', 'info');
+      expect(mockUi.notify).toHaveBeenCalledWith('[Footer: context 0.0 percent of 128k, model test-model]', 'info');
     });
     
     it('should handle errors and notify', async () => {
@@ -195,6 +195,12 @@ describe('footer-suppressor extension', () => {
       });
       await footerStatusHandler!({}, mockCtx);
       expect(mockUi.notify).toHaveBeenCalledWith('[Error getting footer status: Error: context error]', 'error');
+    });
+
+    it('should no-op when UI is explicitly unavailable', async () => {
+      const ctxWithoutUi = { ...mockCtx, hasUI: false };
+      await footerStatusHandler!({}, ctxWithoutUi);
+      expect(mockUi.notify).not.toHaveBeenCalled();
     });
   });
 });

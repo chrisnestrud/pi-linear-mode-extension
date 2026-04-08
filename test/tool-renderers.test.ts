@@ -83,11 +83,11 @@ describe('tool-renderers extension', () => {
       expect(component.content).toBe('');
     });
 
-    it('should render partial result with status first', () => {
+    it('should render partial result with call and status on one line', () => {
       const tool = getTool('read');
       const args = { path: '/tmp/file.txt' };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Reading...]\n[read] {"path":"/tmp/file.txt"}');
+      expect(component.content).toBe('[read] {"path":"/tmp/file.txt"} [Reading...]');
     });
 
     it('should render result with non-text content', () => {
@@ -95,7 +95,7 @@ describe('tool-renderers extension', () => {
       const args = { path: '/tmp/file.txt' };
       const result = { content: [{ type: 'image' as const }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Read complete]\n[read] {"path":"/tmp/file.txt"}');
+      expect(component.content).toBe('[read] {"path":"/tmp/file.txt"} [Read complete]');
     });
 
     it('should render result with empty text content', () => {
@@ -106,8 +106,7 @@ describe('tool-renderers extension', () => {
         details: { truncation: { truncated: false, totalLines: 0 } },
       };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toContain('[Done (1 lines)]');
-      expect(component.content).toContain('[read] {"path":"/tmp/file.txt"}');
+      expect(component.content).toContain('[read] {"path":"/tmp/file.txt"} [Done (1 lines)]');
     });
 
     it('should render result with text content and truncation', () => {
@@ -158,7 +157,7 @@ describe('tool-renderers extension', () => {
       const tool = getTool('bash');
       const args = { command: 'ls -la', excludeFromContext: false };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Running...]\n[bash] {"command":"ls -la","excludeFromContext":false}');
+      expect(component.content).toBe('[bash] {"command":"ls -la","excludeFromContext":false} [Running...]');
     });
 
     it('should render result with exit code 0', () => {
@@ -238,14 +237,14 @@ describe('tool-renderers extension', () => {
       const tool = getTool('write');
       const args = { path: '/tmp/file.txt', content: 'hello' };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Writing...]\n[write] {"path":"/tmp/file.txt","content":"hello"}');
+      expect(component.content).toBe('[write] {"path":"/tmp/file.txt","content":"hello"} [Writing...]');
     });
 
     it('should render complete result', () => {
       const tool = getTool('write');
       const args = { path: '/tmp/file.txt', content: 'hello' };
       const component = tool.renderResult({} as any, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Done]\n[write] {"path":"/tmp/file.txt","content":"hello"}');
+      expect(component.content).toBe('[write] {"path":"/tmp/file.txt","content":"hello"} [Done]');
     });
   });
 
@@ -261,7 +260,7 @@ describe('tool-renderers extension', () => {
       const tool = getTool('edit');
       const args = { path: '/tmp/file.txt', edits: [] };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Editing...]\n[edit] {"path":"/tmp/file.txt","edits":[]}');
+      expect(component.content).toBe('[edit] {"path":"/tmp/file.txt","edits":[]} [Editing...]');
     });
 
     it('should render result with non-text content', () => {
@@ -269,7 +268,7 @@ describe('tool-renderers extension', () => {
       const args = { path: '/tmp/file.txt', edits: [] };
       const result = { content: [{ type: 'image' as const }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Edit complete]\n[edit] {"path":"/tmp/file.txt","edits":[]}');
+      expect(component.content).toBe('[edit] {"path":"/tmp/file.txt","edits":[]} [Edit complete]');
     });
 
     it('should render result with diff text', () => {
@@ -307,7 +306,7 @@ describe('tool-renderers extension', () => {
       const tool = getTool('find');
       const args = { pattern: '*.ts', path: '.' };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Finding...]\n[find] {"pattern":"*.ts","path":"."}');
+      expect(component.content).toBe('[find] {"pattern":"*.ts","path":"."} [Finding...]');
     });
 
     it('should render result with matches', () => {
@@ -323,7 +322,7 @@ describe('tool-renderers extension', () => {
       const args = { pattern: '*.ts', path: '.' };
       const result = { content: [{ type: 'image' as const }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Find complete]\n[find] {"pattern":"*.ts","path":"."}');
+      expect(component.content).toBe('[find] {"pattern":"*.ts","path":"."} [Find complete]');
     });
   });
 
@@ -339,7 +338,7 @@ describe('tool-renderers extension', () => {
       const tool = getTool('grep');
       const args = { pattern: 'function', path: '.' };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Grepping...]\n[grep] {"pattern":"function","path":"."}');
+      expect(component.content).toBe('[grep] {"pattern":"function","path":"."} [Grepping...]');
     });
 
     it('should render result with matches', () => {
@@ -358,7 +357,7 @@ describe('tool-renderers extension', () => {
       const args = { pattern: 'function', path: '.' };
       const result = { content: [{ type: 'image' as const }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Grep complete]\n[grep] {"pattern":"function","path":"."}');
+      expect(component.content).toBe('[grep] {"pattern":"function","path":"."} [Grep complete]');
     });
   });
 
@@ -374,7 +373,7 @@ describe('tool-renderers extension', () => {
       const tool = getTool('ls');
       const args = { path: '.' };
       const component = tool.renderResult({} as any, { isPartial: true, expanded: false }, {}, { args });
-      expect(component.content).toBe('[Listing...]\n[ls] {"path":"."}');
+      expect(component.content).toBe('[ls] {"path":"."} [Listing...]');
     });
 
     it('should render result with items', () => {
@@ -390,7 +389,7 @@ describe('tool-renderers extension', () => {
       const args = { path: '.' };
       const result = { content: [{ type: 'image' as const }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
-      expect(component.content).toBe('[List complete]\n[ls] {"path":"."}');
+      expect(component.content).toBe('[ls] {"path":"."} [List complete]');
     });
   });
 

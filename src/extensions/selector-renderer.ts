@@ -1,6 +1,6 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Container, Text, Spacer, Input, fuzzyFilter } from "@mariozechner/pi-tui";
-import { formatSelectorItem } from "../lib/formatting.ts";
+import { formatSelectorItem, formatUIMessage } from "../lib/formatting.ts";
 
 interface SelectorItem {
   id: string;
@@ -61,33 +61,21 @@ function findHighlightIndices(query: string, text: string): number[] {
   return [...indices].sort((a, b) => a - b);
 }
 
-function highlightMatches(text: string, indices: number[]): string {
-  if (indices.length === 0) {
-    return text;
+function inlineDescription(item: SelectorItem): string {
+  if (!item.description) {
+    return item.label;
   }
 
-  const highlighted = new Set(indices);
-  let result = "";
-  let open = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const isMatch = highlighted.has(i);
-    if (isMatch && !open) {
-      result += "‹";
-      open = true;
-    }
-    if (!isMatch && open) {
-      result += "›";
-      open = false;
-    }
-    result += text[i];
+  const description = item.description.replace(/\s+/g, " ").trim();
+  if (description.length === 0) {
+    return item.label;
   }
 
-  if (open) {
-    result += "›";
+  if (description.length <= 60) {
+    return `${item.label} - ${description}`;
   }
 
-  return result;
+  return item.label;
 }
 
 class LinearSelectorComponent extends Container {
@@ -149,17 +137,8 @@ class LinearSelectorComponent extends Container {
     this.selectedIndex = 0;
   }
 
-  private getHighlightedLabel(item: SelectorItem): string {
-    if (!this.filterQuery.trim()) {
-      return item.label;
-    }
-
-    const indices = findHighlightIndices(this.filterQuery, item.label);
-    if (indices.length === 0) {
-      return item.label;
-    }
-
-    return highlightMatches(item.label, indices);
+  private getDisplayedLabel(item: SelectorItem): string {
+    return inlineDescription(item);
   }
 
   private renderSelector(): void {
@@ -168,23 +147,23 @@ class LinearSelectorComponent extends Container {
     const visibleItems = this.getVisibleItems();
 
     if (this.options?.title) {
-      this.addChild(new Text(this.options.title, 0, 0));
+      this.addChild(new Text(formatUIMessage(this.options.title), 0, 0));
     }
 
-    this.addChild(new Text(`Filter: ${this.filterQuery || ""}`, 0, 0));
+    this.addChild(new Text(formatUIMessage(`Filter: ${this.filterQuery || ""}`), 0, 0));
 
     if (visibleItems.length === 0) {
-      this.addChild(new Text("  No matches", 0, 0));
+      this.addChild(new Text(formatUIMessage("No matches"), 0, 0));
     }
 
     for (let i = 0; i < visibleItems.length; i++) {
       const item = visibleItems[i];
       const isSelected = i === this.selectedIndex;
-      const line = formatSelectorItem(i, this.getHighlightedLabel(item), isSelected);
+      const line = formatSelectorItem(i, this.getDisplayedLabel(item), isSelected);
       this.addChild(new Text(line, 0, 0));
 
-      if (item.description) {
-        this.addChild(new Text(`    ${item.description}`, 0, 0));
+      if (item.description && inlineDescription(item) === item.label) {
+        this.addChild(new Text(formatUIMessage(`Description: ${item.description}`), 0, 0));
       }
 
       if (i < visibleItems.length - 1) {

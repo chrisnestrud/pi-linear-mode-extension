@@ -85,6 +85,7 @@ vi.mock('../src/lib/formatting.ts', () => ({
     const prefix = isSelected ? '> ' : '  ';
     return `${prefix}[${index + 1}] ${label}`;
   }),
+  formatUIMessage: vi.fn().mockImplementation((message) => `[${message}]`),
 }));
 
 describe('selector-renderer extension', () => {
@@ -209,7 +210,7 @@ describe('LinearSelectorComponent (via renderer)', () => {
       const component = createComponent([{ id: '1', label: 'Option' }], vi.fn(), vi.fn(), { title: 'Select an option' });
       expect(component.children.length).toBeGreaterThan(2);
       const firstChild = component.children[0];
-      expect(firstChild.content).toBe('Select an option');
+      expect(firstChild.content).toBe('[Select an option]');
     });
 
     it('should render numbered items with formatting', () => {
@@ -229,10 +230,16 @@ describe('LinearSelectorComponent (via renderer)', () => {
       expect(formatSelectorItem).toHaveBeenCalledWith(0, longLabel, true);
     });
 
-    it('should render descriptions on separate lines', () => {
+    it('should inline short descriptions into selector labels', () => {
       const items = [{ id: '1', label: 'Option', description: 'Short desc' }];
+      createComponent(items);
+      expect(formatSelectorItem).toHaveBeenCalledWith(0, 'Option - Short desc', true);
+    });
+
+    it('should render long descriptions as bracketed description lines', () => {
+      const items = [{ id: '1', label: 'Option', description: 'A'.repeat(80) }];
       const component = createComponent(items);
-      expect(component.children.some((child: any) => child.content === '    Short desc')).toBe(true);
+      expect(component.children.some((child: any) => child.content === `[Description: ${'A'.repeat(80)}]`)).toBe(true);
     });
 
     it('should only add spacers between items, not after last', () => {
@@ -371,10 +378,10 @@ describe('LinearSelectorComponent (via renderer)', () => {
       ], vi.fn(), onCancel);
 
       component.handleKey('a');
-      expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: a]')).toBe(true);
 
       expect(component.handleKey('Escape')).toBe(true);
-      expect(component.children.some((child: any) => child.content === 'Filter: ')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: ]')).toBe(true);
       expect(onCancel).not.toHaveBeenCalled();
 
       expect(component.handleKey('Escape')).toBe(true);
@@ -390,7 +397,7 @@ describe('LinearSelectorComponent (via renderer)', () => {
 
       const handled = component.handleKey('a');
       expect(handled).toBe(true);
-      expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: a]')).toBe(true);
     });
 
     it('should keep original label when filter only matches description or id', () => {
@@ -399,27 +406,10 @@ describe('LinearSelectorComponent (via renderer)', () => {
       ]);
 
       component.handleKey('a');
-      component.handleKey('l');
-      component.handleKey('p');
-      component.handleKey('h');
-      component.handleKey('a');
-
-      expect(formatSelectorItem).toHaveBeenCalledWith(0, 'Zeta', true);
+      expect(formatSelectorItem).toHaveBeenCalledWith(0, 'Zeta - Matches query', true);
     });
 
-    it('should highlight full consecutive match ranges', () => {
-      const component = createComponent([
-        { id: '1', label: 'Alpha' },
-      ]);
-
-      component.handleKey('A');
-      component.handleKey('l');
-      component.handleKey('p');
-
-      expect(formatSelectorItem).toHaveBeenLastCalledWith(0, '‹Alp›ha', true);
-    });
-
-    it('should fuzzy filter and rank results', () => {
+    it('should fuzzy filter without decorative markers', () => {
       const items = [
         { id: '1', label: 'Gamma Model' },
         { id: '2', label: 'Gpt Mini' },
@@ -430,10 +420,9 @@ describe('LinearSelectorComponent (via renderer)', () => {
       component.handleKey('g');
       component.handleKey('m');
 
-      const textChildren = component.children.filter((child: any) => typeof child.content === 'string');
-      const optionLines = textChildren.map((child: any) => child.content).filter((line: string) => line.includes('['));
-      expect(optionLines.some((line: string) => line.includes('‹G›pt ‹M›ini'))).toBe(true);
-      expect(optionLines.some((line: string) => line.includes('‹G›e‹m›ini Pro'))).toBe(true);
+      expect(component.children.some((child: any) => typeof child.content === 'string' && child.content.includes('‹'))).toBe(false);
+      expect(component.children.some((child: any) => typeof child.content === 'string' && child.content.includes('›'))).toBe(false);
+      expect(component.children.some((child: any) => child.content === '> [1] Gamma Model')).toBe(true);
     });
 
     it('should treat invalid number keys as filter input', () => {
@@ -443,14 +432,14 @@ describe('LinearSelectorComponent (via renderer)', () => {
       const handled = component.handleKey('5');
       expect(handled).toBe(true);
       expect(onSelect).not.toHaveBeenCalled();
-      expect(component.children.some((child: any) => child.content === 'Filter: 5')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: 5]')).toBe(true);
     });
 
     it('should handle lowercase text input as filtering', () => {
       const component = createComponent();
       const handled = component.handleKey('x');
       expect(handled).toBe(true);
-      expect(component.children.some((child: any) => child.content === 'Filter: x')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: x]')).toBe(true);
     });
   });
 
@@ -467,11 +456,11 @@ describe('LinearSelectorComponent (via renderer)', () => {
       ]);
 
       component.handleKey('a');
-      expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: a]')).toBe(true);
 
       const handled = component.handleKey('Backspace');
       expect(handled).toBe(true);
-      expect(component.children.some((child: any) => child.content === 'Filter: ')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: ]')).toBe(true);
     });
 
     it('should support Ctrl+W while filtering', () => {
@@ -489,22 +478,22 @@ describe('LinearSelectorComponent (via renderer)', () => {
       component.handleKey('e');
       component.handleKey('t');
       component.handleKey('a');
-      expect(component.children.some((child: any) => child.content === 'Filter: Alpha Beta')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: Alpha Beta]')).toBe(true);
 
       const handled = component.handleKey('\u0017');
       expect(handled).toBe(true);
-      expect(component.children.some((child: any) => child.content === 'Filter: Alpha ')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: Alpha ]')).toBe(true);
     });
 
     it('should support Ctrl+U while filtering', () => {
       const component = createComponent([{ id: '1', label: 'Alpha' }]);
       component.handleKey('a');
       component.handleKey('b');
-      expect(component.children.some((child: any) => child.content === 'Filter: ab')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: ab]')).toBe(true);
 
       const handled = component.handleKey('\u0015');
       expect(handled).toBe(true);
-      expect(component.children.some((child: any) => child.content === 'Filter: ')).toBe(true);
+      expect(component.children.some((child: any) => child.content === '[Filter: ]')).toBe(true);
     });
 
     it('should show filter-specific instructions while filtering', () => {
@@ -547,7 +536,7 @@ describe('LinearSelectorComponent (via renderer)', () => {
       const desc = 'A'.repeat(100);
       const items = [{ id: '1', label: 'Option', description: desc }];
       const component = createComponent(items);
-      expect(component.children.some((child: any) => child.content === `    ${desc}`)).toBe(true);
+      expect(component.children.some((child: any) => child.content === `[Description: ${desc}]`)).toBe(true);
     });
 
     it('should handle items without descriptions', () => {
