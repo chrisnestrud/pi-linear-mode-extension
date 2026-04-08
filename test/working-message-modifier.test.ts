@@ -170,12 +170,24 @@ describe('working-message-modifier extension', () => {
       if (callbacks && callbacks.size > 0) {
         const timeoutEntry = Array.from(callbacks.values())[0];
         timeoutEntry.callback();
-        // Should not call setWorkingMessage again (already cleared)
-        // The mock call count for setWorkingMessage includes the clear call
-        // We'll just ensure no error
       }
       // The timeout callback should check workingMessageActive and skip
       expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should hit inactive branch inside timeout callback', async () => {
+      const turnStartHandler = eventHandlers.get('turn_start');
+      const agentEndHandler = eventHandlers.get('agent_end');
+      await turnStartHandler!({}, mockCtx);
+      await agentEndHandler!({}, mockCtx);
+      const callbacks = (mockSetTimeout as any).callbacks;
+      expect(callbacks).toBeDefined();
+      if (callbacks && callbacks.size > 0) {
+        const timeoutEntry = Array.from(callbacks.values())[0];
+        timeoutEntry.callback();
+      }
+      expect(logger.warn).not.toHaveBeenCalled();
+      expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
     });
   });
   

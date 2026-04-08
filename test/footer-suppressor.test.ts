@@ -155,6 +155,15 @@ describe('footer-suppressor extension', () => {
       await footerStatusHandler!({}, mockCtx);
       expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/128k test-model]', 'info');
     });
+
+    it('should handle string context percent without calling toFixed', async () => {
+      mockSession.getContextUsage.mockReturnValue({
+        contextWindow: 128,
+        percent: 'oops',
+      });
+      await footerStatusHandler!({}, mockCtx);
+      expect(mockUi.notify).toHaveBeenCalledWith('[Error getting footer status: TypeError: contextPercent.toFixed is not a function]', 'error');
+    });
     
     it('should handle missing model', async () => {
       const ctxWithoutModel = { ...mockCtx, model: undefined };

@@ -283,6 +283,16 @@ describe('tool-renderers extension', () => {
       expect(component.content).toContain('+new');
       expect(component.content).not.toContain('--- a/file.txt');
     });
+
+    it('should show expanded collapse hint for diff output', () => {
+      const tool = getTool('edit');
+      const args = { path: '/tmp/file.txt', edits: [] };
+      const diffLines = Array.from({ length: 10 }, (_, i) => `+line ${i + 1}`).join('\n');
+      const diffText = `--- a/file.txt\n+++ b/file.txt\n@@ -1,1 +1,10 @@\n${diffLines}`;
+      const result = { content: [{ type: 'text' as const, text: diffText }], details: undefined };
+      const component = tool.renderResult(result, { isPartial: false, expanded: true }, {}, { args });
+      expect(component.content).toContain('[ctrl+o to collapse]');
+    });
   });
 
   describe('find tool', () => {
@@ -306,6 +316,14 @@ describe('tool-renderers extension', () => {
       const result = { content: [{ type: 'text' as const, text: 'file1.ts\nfile2.ts\nfile3.ts' }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
       expect(component.content).toContain('[Done (3 matches)]');
+    });
+
+    it('should render non-text find fallback', () => {
+      const tool = getTool('find');
+      const args = { pattern: '*.ts', path: '.' };
+      const result = { content: [{ type: 'image' as const }], details: undefined };
+      const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
+      expect(component.content).toBe('[Find complete]\n[find] {"pattern":"*.ts","path":"."}');
     });
   });
 
@@ -334,6 +352,14 @@ describe('tool-renderers extension', () => {
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
       expect(component.content).toContain('[Done (2 matches)]');
     });
+
+    it('should render non-text grep fallback', () => {
+      const tool = getTool('grep');
+      const args = { pattern: 'function', path: '.' };
+      const result = { content: [{ type: 'image' as const }], details: undefined };
+      const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
+      expect(component.content).toBe('[Grep complete]\n[grep] {"pattern":"function","path":"."}');
+    });
   });
 
   describe('ls tool', () => {
@@ -357,6 +383,14 @@ describe('tool-renderers extension', () => {
       const result = { content: [{ type: 'text' as const, text: 'file1.ts\nfile2.ts\ndir/' }], details: undefined };
       const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
       expect(component.content).toContain('[Done (3 items)]');
+    });
+
+    it('should render non-text ls fallback', () => {
+      const tool = getTool('ls');
+      const args = { path: '.' };
+      const result = { content: [{ type: 'image' as const }], details: undefined };
+      const component = tool.renderResult(result, { isPartial: false, expanded: false }, {}, { args });
+      expect(component.content).toBe('[List complete]\n[ls] {"path":"."}');
     });
   });
 
