@@ -43,7 +43,6 @@ describe('message-renderers extension', () => {
     const expectedTypes = [
       'linear-workflow/interaction',
       'linear-workflow/status',
-      'linear-workflow/abort',
       'footer-snapshot',
       'footer-status',
     ];

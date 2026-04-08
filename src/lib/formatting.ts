@@ -77,7 +77,6 @@ export function formatCustomMessage(type: string, content: string): string {
   const typeMap: Record<string, string> = {
     "linear-workflow/interaction": "Interaction",
     "linear-workflow/status": "Status",
-    "linear-workflow/abort": "Aborted",
     "footer-snapshot": "Footer",
     "footer-status": "Footer",
   };

@@ -101,7 +101,6 @@ describe('formatting utilities', () => {
     it('formats known message types', () => {
       expect(formatCustomMessage('linear-workflow/interaction', 'Choose option')).toBe('[Interaction: Choose option]');
       expect(formatCustomMessage('linear-workflow/status', 'Ready')).toBe('[Status: Ready]');
-      expect(formatCustomMessage('linear-workflow/abort', 'Operation cancelled')).toBe('[Aborted: Operation cancelled]');
       expect(formatCustomMessage('footer-snapshot', '0.0%/128k')).toBe('[Footer: 0.0%/128k]');
       expect(formatCustomMessage('footer-status', '0.0%/128k')).toBe('[Footer: 0.0%/128k]');
     });

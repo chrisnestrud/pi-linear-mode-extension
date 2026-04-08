@@ -3,11 +3,9 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 // Import all extensions
 import interactionManager from '../src/extensions/interaction-manager.ts';
-import abortMarker from '../src/extensions/abort-marker.ts';
 import tuiCompat from '../src/extensions/tui-compat.ts';
 import toolRenderers from '../src/extensions/tool-renderers.ts';
 import messageRenderers from '../src/extensions/message-renderers.ts';
-import bashRenderer from '../src/extensions/bash-renderer.ts';
 import selectorRenderer from '../src/extensions/selector-renderer.ts';
 import workingMessageModifier from '../src/extensions/working-message-modifier.ts';
 import footerSuppressor from '../src/extensions/footer-suppressor.ts';
@@ -19,7 +17,6 @@ function createMockPi(): ExtensionAPI {
     registerCommand: vi.fn(),
     registerMessageRenderer: vi.fn(),
     registerTool: vi.fn(),
-    registerBashRenderer: vi.fn(),
     registerSelectorRenderer: vi.fn(),
     // Add other methods as needed
   } as unknown as ExtensionAPI;
@@ -38,11 +35,6 @@ describe('extension registration', () => {
     expect(mockPi.on).toHaveBeenCalled();
   });
 
-  it('abortMarker should register without error', () => {
-    expect(() => abortMarker(mockPi)).not.toThrow();
-    expect(mockPi.on).toHaveBeenCalled();
-  });
-
   it('tuiCompat should register without error', () => {
     expect(() => tuiCompat(mockPi)).not.toThrow();
     expect(mockPi.on).toHaveBeenCalled();
@@ -56,11 +48,6 @@ describe('extension registration', () => {
   it('messageRenderers should register without error', () => {
     expect(() => messageRenderers(mockPi)).not.toThrow();
     expect(mockPi.registerMessageRenderer).toHaveBeenCalled();
-  });
-
-  it('bashRenderer should register without error', () => {
-    expect(() => bashRenderer(mockPi)).not.toThrow();
-    expect(mockPi.registerBashRenderer).toHaveBeenCalled();
   });
 
   it('selectorRenderer should register without error', () => {

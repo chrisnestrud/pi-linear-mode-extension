@@ -21,7 +21,6 @@ export default function messageRenderers(pi: ExtensionAPI) {
   for (const customType of [
     "linear-workflow/interaction",
     "linear-workflow/status",
-    "linear-workflow/abort",
     "footer-snapshot",
     "footer-status",
   ]) {

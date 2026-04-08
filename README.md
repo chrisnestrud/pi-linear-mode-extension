@@ -7,11 +7,9 @@ A pi extension that provides a more linear workflow inside the pi CLI with numbe
 - **Numbered Interactions**: Tools are displayed with numbers for easy selection
 - **Custom Tool Renderers**: Linear display of tool calls and results
 - **Selector Renderer**: Interactive selection UI for choosing options
-- **Bash Renderer**: Custom rendering for bash command output
 - **Message Renderers**: Custom display for different message types
 - **TUI Compatibility**: Compatibility layer for TUI interactions
 - **Interaction Manager**: Handles user interactions in a linear flow
-- **Abort Marker**: Tracks aborted operations
 - **Screen Reader Accessibility**: All UI elements marked with `[` and `]` brackets
 - **Footer Suppression**: Option to suppress frequently updating footer for screen readers
 - **Working Message**: Clear `[Working...]` feedback during LLM processing
@@ -28,7 +26,6 @@ Once installed, the extension will automatically:
 - Show numbered interactions for tool selection
 - Render tool calls and results in a linear format
 - Provide interactive selection dialogs
-- Customize bash command output display
 - Mark all UI/system messages with `[` and `]` brackets for screen readers
 - Suppress frequently updating footer by default (screen reader friendly)
 - Show `[Working...]` during LLM processing

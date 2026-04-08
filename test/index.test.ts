@@ -27,7 +27,6 @@ describe('pi-linear-mode-extension', () => {
       registerMessageRenderer: vi.fn(),
       sendMessage: vi.fn(),
       registerTool: vi.fn(),
-      registerBashRenderer: vi.fn(),
       registerSelectorRenderer: vi.fn(),
     } as unknown as ExtensionAPI;
   });

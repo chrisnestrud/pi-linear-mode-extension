@@ -5,22 +5,18 @@
  * - Numbered interactions for tool selection
  * - Custom tool renderers for linear display
  * - Selector renderer for interactive selection
- * - Bash renderer for command output
  * - Message renderers for custom message display
  * - TUI compatibility layer
  * - Interaction manager for handling user interactions
- * - Abort marker for tracking aborted operations
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 // Import all extensions
 import interactionManager from "./src/extensions/interaction-manager.ts";
-import abortMarker from "./src/extensions/abort-marker.ts";
 import tuiCompat from "./src/extensions/tui-compat.ts";
 import toolRenderers from "./src/extensions/tool-renderers.ts";
 import messageRenderers from "./src/extensions/message-renderers.ts";
-import bashRenderer from "./src/extensions/bash-renderer.ts";
 import selectorRenderer from "./src/extensions/selector-renderer.ts";
 import workingMessageModifier from "./src/extensions/working-message-modifier.ts";
 import footerSuppressor from "./src/extensions/footer-suppressor.ts";
@@ -28,11 +24,9 @@ import footerSuppressor from "./src/extensions/footer-suppressor.ts";
 export default function piLinearModeExtension(pi: ExtensionAPI) {
   // Register all extensions in order
   interactionManager(pi);
-  abortMarker(pi);
   tuiCompat(pi);
   toolRenderers(pi);
   messageRenderers(pi);
-  bashRenderer(pi);
   selectorRenderer(pi);
   workingMessageModifier(pi);
   footerSuppressor(pi);
