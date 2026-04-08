@@ -18,19 +18,17 @@ describe('logger', () => {
     vi.restoreAllMocks();
   });
   
-  it('should log debug messages only when debug mode is enabled', () => {
+  it('should log debug messages only when debug mode is enabled', async () => {
     // Debug disabled by default
     logger.debug('test debug');
     expect(console.debug).not.toHaveBeenCalled();
     
-    // Enable debug
+    // Enable debug and re-import logger
     process.env.PI_LINEAR_MODE_DEBUG = 'true';
-    // Need to re-import logger to pick up new env
-    // For now, just test that logger functions exist
-    expect(typeof logger.debug).toBe('function');
-    expect(typeof logger.info).toBe('function');
-    expect(typeof logger.warn).toBe('function');
-    expect(typeof logger.error).toBe('function');
+    vi.resetModules();
+    const { logger: freshLogger } = await import('../src/lib/logger.ts');
+    freshLogger.debug('test debug');
+    expect(console.debug).toHaveBeenCalledWith('[pi-linear-mode:debug]', 'test debug');
   });
   
   it('should log info messages', () => {

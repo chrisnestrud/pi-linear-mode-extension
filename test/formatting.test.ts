@@ -111,6 +111,17 @@ describe('formatting utilities', () => {
       expect(formatCustomMessage('custom/type', 'Message')).toBe('[type: Message]');
       expect(formatCustomMessage('unknown', 'Message')).toBe('[unknown: Message]');
     });
+
+    it('handles edge cases', () => {
+      // empty type
+      expect(formatCustomMessage('', 'Message')).toBe('[Message: Message]');
+      // type with trailing slash
+      expect(formatCustomMessage('linear-workflow/', 'Message')).toBe('[Message: Message]');
+      // type with multiple slashes
+      expect(formatCustomMessage('a/b/c', 'Message')).toBe('[c: Message]');
+      // single slash
+      expect(formatCustomMessage('/', 'Message')).toBe('[Message: Message]');
+    });
   });
 
   describe('truncateForScreenReader', () => {

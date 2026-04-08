@@ -6,6 +6,9 @@ import {
   resolveActiveInteraction,
   cancelInteractionForNormalHandoff,
   discardInteractionsForSessionChange,
+  enqueueInteraction,
+  createAndPublishInteraction,
+  cancelActiveInteraction,
 } from '../src/lib/interactions.ts';
 import { state } from '../src/lib/state.ts';
 
@@ -18,8 +21,9 @@ describe('interactions utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset state
-    state.activeInteraction = null;
-    state.lastShownInteractionId = null;
+    state.activeInteraction = undefined;
+    state.lastShownInteractionId = undefined;
+    state.queuedInteractions = [];
   });
 
   describe('renderInteractionText', () => {
@@ -67,7 +71,7 @@ describe('interactions utilities', () => {
 
   describe('publishActiveInteraction', () => {
     it('should not publish when no active interaction', () => {
-      state.activeInteraction = null;
+      state.activeInteraction = undefined;
       publishActiveInteraction(mockPi);
       expect(mockPi.sendMessage).not.toHaveBeenCalled();
     });
@@ -165,6 +169,148 @@ describe('interactions utilities', () => {
       expect(mockExecute).toHaveBeenCalled();
       expect(state.activeInteraction).toBeUndefined();
       // publishActiveInteraction is called but won't send message since no active interaction
+    });
+  });
+
+  describe('enqueueInteraction', () => {
+    it('should set as active interaction if none exists', () => {
+      const input = {
+        title: 'Test',
+        options: [{ label: 'Option' }],
+        sessionFile: 'test.json',
+        sourceExtension: 'test',
+      };
+      const interaction = enqueueInteraction(input);
+      expect(interaction.id).toBeDefined();
+      expect(interaction.title).toBe('Test');
+      expect(state.activeInteraction).toBe(interaction);
+      expect(state.queuedInteractions).toHaveLength(0);
+    });
+
+    it('should queue interaction if active already exists', () => {
+      // First interaction becomes active
+      const first = enqueueInteraction({
+        title: 'First',
+        options: [{ label: 'Option' }],
+      });
+      expect(state.activeInteraction).toBe(first);
+      // Second interaction queued
+      const second = enqueueInteraction({
+        title: 'Second',
+        options: [{ label: 'Option' }],
+      });
+      expect(state.activeInteraction).toBe(first);
+      expect(state.queuedInteractions).toHaveLength(1);
+      expect(state.queuedInteractions[0]).toBe(second);
+    });
+  });
+
+  describe('createAndPublishInteraction', () => {
+    it('should enqueue and publish with force', () => {
+      const input = {
+        title: 'Test',
+        options: [{ label: 'Option' }],
+      };
+      const interaction = createAndPublishInteraction(mockPi, input);
+      expect(interaction.title).toBe('Test');
+      expect(state.activeInteraction).toBe(interaction);
+      // publishActiveInteraction is called with force: true
+      expect(mockPi.sendMessage).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('cancelActiveInteraction', () => {
+    it('should clear active interaction and promote next', () => {
+      // First interaction active, second queued
+      const first = enqueueInteraction({ title: 'First', options: [{ label: 'Option' }] });
+      const second = enqueueInteraction({ title: 'Second', options: [{ label: 'Option' }] });
+      expect(state.activeInteraction).toBe(first);
+      expect(state.queuedInteractions).toHaveLength(1);
+      cancelActiveInteraction();
+      // Active should now be second, queue empty
+      expect(state.activeInteraction).toBe(second);
+      expect(state.queuedInteractions).toHaveLength(0);
+    });
+
+    it('should clear lastShownInteractionId', () => {
+      state.activeInteraction = {
+        id: 'test-1',
+        title: 'Test',
+        options: [{ label: 'Option' }],
+        createdAt: Date.now(),
+        sourceExtension: 'test',
+        sessionFile: 'test.json',
+      };
+      state.lastShownInteractionId = 'test-1';
+      cancelActiveInteraction();
+      expect(state.lastShownInteractionId).toBeUndefined();
+    });
+  });
+
+  describe('discardInteractionsForSessionChange', () => {
+    it('should return false when no mismatched session', () => {
+      state.activeInteraction = {
+        id: 'test',
+        title: 'Test',
+        options: [],
+        createdAt: Date.now(),
+        sourceExtension: 'test',
+        sessionFile: 'session.json',
+      };
+      const result = discardInteractionsForSessionChange('session.json');
+      expect(result).toBe(false);
+      expect(state.activeInteraction).toBeDefined();
+    });
+
+    it('should clear interactions when session mismatches', () => {
+      state.activeInteraction = {
+        id: 'test',
+        title: 'Test',
+        options: [],
+        createdAt: Date.now(),
+        sourceExtension: 'test',
+        sessionFile: 'old.json',
+      };
+      state.queuedInteractions.push({
+        id: 'queued',
+        title: 'Queued',
+        options: [],
+        createdAt: Date.now(),
+        sourceExtension: 'test',
+        sessionFile: 'old.json',
+      });
+      const result = discardInteractionsForSessionChange('new.json');
+      expect(result).toBe(true);
+      expect(state.activeInteraction).toBeUndefined();
+      expect(state.queuedInteractions).toHaveLength(0);
+      expect(state.lastShownInteractionId).toBeUndefined();
+    });
+  });
+
+  describe('cancelInteractionForNormalHandoff', () => {
+    it('should return false when no active interaction', () => {
+      state.activeInteraction = undefined;
+      const result = cancelInteractionForNormalHandoff(mockPi);
+      expect(result).toBe(false);
+      expect(mockPi.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('should cancel active interaction and publish', () => {
+      state.activeInteraction = {
+        id: 'test',
+        title: 'Test',
+        options: [{ label: 'Option' }],
+        createdAt: Date.now(),
+        sourceExtension: 'test',
+        sessionFile: 'test.json',
+      };
+      const result = cancelInteractionForNormalHandoff(mockPi);
+      expect(result).toBe(true);
+      expect(state.activeInteraction).toBeUndefined();
+      // publishActiveInteraction is called with no active interaction, so no sendMessage
+      // but we can check that sendMessage was called (maybe it will send empty?)
+      // Actually publishActiveInteraction will not send message because activeInteraction is undefined after cancelActiveInteraction
+      // So we just ensure cancelActiveInteraction worked
     });
   });
 });

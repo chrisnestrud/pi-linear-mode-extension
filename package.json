@@ -19,6 +19,7 @@
     "@mariozechner/pi-tui": "*"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.3",
     "@vitest/ui": "^4.1.3",
     "typescript": "^5.0.0",
     "vitest": "^4.1.3"
