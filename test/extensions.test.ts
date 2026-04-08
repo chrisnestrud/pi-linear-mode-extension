@@ -4,7 +4,6 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 // Import all extensions
 import interactionManager from '../src/extensions/interaction-manager.ts';
 import abortMarker from '../src/extensions/abort-marker.ts';
-import numberedInteractions from '../src/extensions/numbered-interactions.ts';
 import tuiCompat from '../src/extensions/tui-compat.ts';
 import toolRenderers from '../src/extensions/tool-renderers.ts';
 import messageRenderers from '../src/extensions/message-renderers.ts';
@@ -42,11 +41,6 @@ describe('extension registration', () => {
   it('abortMarker should register without error', () => {
     expect(() => abortMarker(mockPi)).not.toThrow();
     expect(mockPi.on).toHaveBeenCalled();
-  });
-
-  it('numberedInteractions should register without error', () => {
-    expect(() => numberedInteractions(mockPi)).not.toThrow();
-    // This extension does not register any listeners
   });
 
   it('tuiCompat should register without error', () => {

@@ -17,7 +17,6 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 // Import all extensions
 import interactionManager from "./src/extensions/interaction-manager.ts";
 import abortMarker from "./src/extensions/abort-marker.ts";
-import numberedInteractions from "./src/extensions/numbered-interactions.ts";
 import tuiCompat from "./src/extensions/tui-compat.ts";
 import toolRenderers from "./src/extensions/tool-renderers.ts";
 import messageRenderers from "./src/extensions/message-renderers.ts";
@@ -30,7 +29,6 @@ export default function piLinearModeExtension(pi: ExtensionAPI) {
   // Register all extensions in order
   interactionManager(pi);
   abortMarker(pi);
-  numberedInteractions(pi);
   tuiCompat(pi);
   toolRenderers(pi);
   messageRenderers(pi);
