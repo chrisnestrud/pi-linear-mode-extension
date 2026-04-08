@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 // Import all extensions
-import interactionManager from '../src/extensions/interaction-manager.ts';
 import tuiCompat from '../src/extensions/tui-compat.ts';
 import toolRenderers from '../src/extensions/tool-renderers.ts';
 import messageRenderers from '../src/extensions/message-renderers.ts';
@@ -30,11 +29,6 @@ describe('extension registration', () => {
     vi.clearAllMocks();
   });
   
-  it('interactionManager should register without error', () => {
-    expect(() => interactionManager(mockPi)).not.toThrow();
-    expect(mockPi.on).toHaveBeenCalled();
-  });
-
   it('tuiCompat should register without error', () => {
     expect(() => tuiCompat(mockPi)).not.toThrow();
     expect(mockPi.on).toHaveBeenCalled();

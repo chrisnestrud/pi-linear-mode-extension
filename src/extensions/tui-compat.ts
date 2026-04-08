@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { cancelInteractionForNormalHandoff } from "../lib/interactions.ts";
 import { resetEphemeralState, state } from "../lib/state.ts";
 
 function warnOnce(ctx: ExtensionContext, key: string, message: string) {
@@ -12,19 +11,14 @@ export default function tuiCompat(pi: ExtensionAPI) {
   pi.registerCommand("linear-package-status", {
     description: "Show current linear workflow package status",
     handler: async (_args, ctx) => {
-      cancelInteractionForNormalHandoff(pi);
-      const lines = [
-        `active interaction: ${state.activeInteraction ? "yes" : "no"}`,
-        `queued interactions: ${state.queuedInteractions.length}`,
-      ];
-      const content = lines.join("\n");
+      const content = "native pi dialogs active\ncustom interaction queue removed";
       pi.sendMessage({
         customType: "linear-workflow/status",
         content,
         display: true,
         details: {
-          activeInteraction: Boolean(state.activeInteraction),
-          queuedInteractions: state.queuedInteractions.length,
+          nativeDialogs: true,
+          customInteractionQueue: false,
         },
       });
       ctx.ui.notify(`[${content}]`, "info");
@@ -32,7 +26,7 @@ export default function tuiCompat(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("linear-test-fork-latest-user", {
-    description: "Fork from the latest user message without cancelling active interaction state",
+    description: "Fork from the latest user message using native pi session flow",
     handler: async (_args, ctx) => {
       const entries = ctx.sessionManager.getEntries();
       const latestUserEntry = [...entries].reverse().find((entry) => entry.type === "message" && entry.message.role === "user");
@@ -60,10 +54,9 @@ export default function tuiCompat(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("linear-test-switch-current-session", {
-    description: "Create a fresh session, then switch back to the current session without cancelling active interaction state",
+    description: "Create a fresh session, then switch back to the current session using native pi session flow",
     handler: async (_args, ctx) => {
       const currentSessionFile = ctx.sessionManager.getSessionFile();
-      const hadActiveInteraction = Boolean(state.activeInteraction);
       if (!currentSessionFile) {
         ctx.ui.notify("[No current session file available to switch back to]", "error");
         return;
@@ -79,14 +72,12 @@ export default function tuiCompat(pi: ExtensionAPI) {
         ctx.ui.notify("[Session switch test cancelled while creating a fresh session]", "warning");
         return;
       }
-      resetEphemeralState();
 
       const switchResult = await ctx.switchSession(currentSessionFile);
       if (switchResult.cancelled) {
         ctx.ui.notify("[Switch back to the original session was cancelled]", "warning");
         return;
       }
-      resetEphemeralState();
 
       pi.sendMessage({
         customType: "linear-workflow/status",
@@ -94,7 +85,7 @@ export default function tuiCompat(pi: ExtensionAPI) {
         display: true,
         details: {
           action: "switch-session",
-          hadActiveInteraction,
+          nativeDialogs: true,
           fromSessionFile: currentSessionFile,
           freshSessionFile,
         },
@@ -103,8 +94,7 @@ export default function tuiCompat(pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
-    // Placeholder: future TUI API compatibility shims can publish package-owned
-    // interactions instead of trying to render richer UI directly.
+    resetEphemeralState();
     void warnOnce;
     void ctx;
   });

@@ -9,7 +9,6 @@ A pi extension that provides a more linear workflow inside the pi CLI with numbe
 - **Selector Renderer**: Interactive selection UI for choosing options
 - **Message Renderers**: Custom display for different message types
 - **TUI Compatibility**: Compatibility layer for TUI interactions
-- **Interaction Manager**: Handles user interactions in a linear flow
 - **Screen Reader Accessibility**: All UI elements marked with `[` and `]` brackets
 - **Footer Suppression**: Option to suppress frequently updating footer for screen readers
 - **Working Message**: Clear `[Working...]` feedback during LLM processing

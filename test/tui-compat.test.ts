@@ -3,12 +3,6 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import tuiCompat from '../src/extensions/tui-compat.ts';
 import { state, resetEphemeralState } from '../src/lib/state.ts';
 
-const mockCancelInteractionForNormalHandoff = vi.fn();
-
-vi.mock('../src/lib/interactions.ts', () => ({
-  cancelInteractionForNormalHandoff: (...args: any[]) => mockCancelInteractionForNormalHandoff(...args),
-}));
-
 describe('tui-compat extension', () => {
   let mockPi: ExtensionAPI & { sendMessage: ReturnType<typeof vi.fn> };
   let registeredCommands: Record<string, any>;
@@ -48,36 +42,20 @@ describe('tui-compat extension', () => {
     expect(ctx.ui.notify).not.toHaveBeenCalled();
   });
 
-  it('linear-package-status reports state and sends message', async () => {
-    state.activeInteraction = {
-      id: 'active-1',
-      title: 'Pick one',
-      options: [],
-      createdAt: new Date().toISOString(),
-    };
-    state.queuedInteractions = [
-      {
-        id: 'queued-1',
-        title: 'Queued',
-        options: [],
-        createdAt: new Date().toISOString(),
-      },
-    ];
-
+  it('linear-package-status reports native dialog status and sends message', async () => {
     const ctx = { ui: { notify: vi.fn() } };
     await registeredCommands['linear-package-status'].handler('', ctx);
 
-    expect(mockCancelInteractionForNormalHandoff).toHaveBeenCalledWith(mockPi);
     expect(mockPi.sendMessage).toHaveBeenCalledWith({
       customType: 'linear-workflow/status',
-      content: 'active interaction: yes\nqueued interactions: 1',
+      content: 'native pi dialogs active\ncustom interaction queue removed',
       display: true,
       details: {
-        activeInteraction: true,
-        queuedInteractions: 1,
+        nativeDialogs: true,
+        customInteractionQueue: false,
       },
     });
-    expect(ctx.ui.notify).toHaveBeenCalledWith('[active interaction: yes\nqueued interactions: 1]', 'info');
+    expect(ctx.ui.notify).toHaveBeenCalledWith('[native pi dialogs active\ncustom interaction queue removed]', 'info');
   });
 
   it('linear-test-fork-latest-user warns when there is no user message', async () => {
@@ -177,17 +155,7 @@ describe('tui-compat extension', () => {
   });
 
   it('linear-test-switch-current-session warns when switching back is cancelled', async () => {
-    state.activeInteraction = {
-      id: 'active-1',
-      title: 'Pick one',
-      options: [],
-      createdAt: new Date().toISOString(),
-    };
-    state.queuedInteractions = [
-      { id: 'queued-1', title: 'Queued', options: [], createdAt: new Date().toISOString() },
-    ];
-    state.lastAbortFingerprint = 'abort';
-    state.lastShownInteractionId = 'shown';
+    state.unsupportedWarnings.add('test-warning');
 
     const ctx = {
       ui: { notify: vi.fn() },
@@ -205,20 +173,10 @@ describe('tui-compat extension', () => {
 
     expect(ctx.switchSession).toHaveBeenCalledWith('/tmp/current.pi');
     expect(ctx.ui.notify).toHaveBeenCalledWith('[Switch back to the original session was cancelled]', 'warning');
-    expect(state.activeInteraction).toBeUndefined();
-    expect(state.queuedInteractions).toEqual([]);
-    expect(state.lastAbortFingerprint).toBeUndefined();
-    expect(state.lastShownInteractionId).toBeUndefined();
+    expect(state.unsupportedWarnings.has('test-warning')).toBe(true);
   });
 
   it('linear-test-switch-current-session sends status on success', async () => {
-    state.activeInteraction = {
-      id: 'active-1',
-      title: 'Pick one',
-      options: [],
-      createdAt: new Date().toISOString(),
-    };
-
     const ctx = {
       ui: { notify: vi.fn() },
       sessionManager: {
@@ -239,12 +197,10 @@ describe('tui-compat extension', () => {
       display: true,
       details: {
         action: 'switch-session',
-        hadActiveInteraction: true,
+        nativeDialogs: true,
         fromSessionFile: '/tmp/current.pi',
         freshSessionFile: '/tmp/fresh.pi',
       },
     });
-    expect(state.activeInteraction).toBeUndefined();
-    expect(state.queuedInteractions).toEqual([]);
   });
 });
