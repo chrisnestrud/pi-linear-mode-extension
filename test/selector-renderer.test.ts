@@ -205,6 +205,7 @@ describe('LinearSelectorComponent (via renderer)', () => {
       const component = createComponent(items);
       const lastChild = component.children[component.children.length - 1];
       expect(lastChild.content).toContain('Enter number (1-3) or press Esc to cancel');
+      expect(lastChild.content).toContain('type to filter');
     });
   });
 
@@ -302,25 +303,78 @@ describe('LinearSelectorComponent (via renderer)', () => {
       expect(onCancel).toHaveBeenCalled();
     });
 
-    it('should return false for unhandled keys', () => {
-      const component = createComponent();
-      const handled = component.handleKey('x');
-      expect(handled).toBe(false);
+    it('should handle alternate escape keys', () => {
+      const onCancel = vi.fn();
+      const component = createComponent([{ id: '1', label: 'Option' }], vi.fn(), onCancel);
+
+      expect(component.handleKey('Esc')).toBe(true);
+      expect(component.handleKey('escape')).toBe(true);
+      expect(component.handleKey('\u001b')).toBe(true);
+      expect(onCancel).toHaveBeenCalledTimes(3);
     });
 
-    it('should ignore invalid number keys', () => {
+    it('should clear filter on first escape and cancel on second', () => {
+      const onCancel = vi.fn();
+      const component = createComponent([
+        { id: '1', label: 'Alpha' },
+        { id: '2', label: 'Beta' },
+      ], vi.fn(), onCancel);
+
+      component.handleKey('a');
+      expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
+
+      expect(component.handleKey('Escape')).toBe(true);
+      expect(component.children.some((child: any) => child.content === 'Filter: ')).toBe(true);
+      expect(onCancel).not.toHaveBeenCalled();
+
+      expect(component.handleKey('Escape')).toBe(true);
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it('should use printable keys to filter items', () => {
+      const items = [
+        { id: '1', label: 'Alpha' },
+        { id: '2', label: 'Beta' },
+      ];
+      const component = createComponent(items);
+
+      const handled = component.handleKey('a');
+      expect(handled).toBe(true);
+      expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
+    });
+
+    it('should fuzzy filter and rank results', () => {
+      const items = [
+        { id: '1', label: 'Gamma Model' },
+        { id: '2', label: 'Gpt Mini' },
+        { id: '3', label: 'Gemini Pro' },
+      ];
+      const component = createComponent(items);
+
+      component.handleKey('g');
+      component.handleKey('m');
+
+      const textChildren = component.children.filter((child: any) => typeof child.content === 'string');
+      const optionLines = textChildren.map((child: any) => child.content).filter((line: string) => line.includes('['));
+      expect(optionLines.some((line: string) => line.includes('‹G›pt ‹M›ini'))).toBe(true);
+      expect(optionLines.some((line: string) => line.includes('‹G›e‹m›ini Pro'))).toBe(true);
+    });
+
+    it('should treat invalid number keys as filter input', () => {
       const onSelect = vi.fn();
       const component = createComponent([{ id: '1', label: 'Option' }], onSelect);
 
       const handled = component.handleKey('5');
-      expect(handled).toBe(false);
+      expect(handled).toBe(true);
       expect(onSelect).not.toHaveBeenCalled();
+      expect(component.children.some((child: any) => child.content === 'Filter: 5')).toBe(true);
     });
 
-    it('should ignore NaN key', () => {
+    it('should handle lowercase text input as filtering', () => {
       const component = createComponent();
-      const handled = component.handleKey('a');
-      expect(handled).toBe(false);
+      const handled = component.handleKey('x');
+      expect(handled).toBe(true);
+      expect(component.children.some((child: any) => child.content === 'Filter: x')).toBe(true);
     });
   });
 
@@ -328,6 +382,62 @@ describe('LinearSelectorComponent (via renderer)', () => {
     it('should call renderSelector', () => {
       const component = createComponent();
       component.invalidate();
+    });
+
+    it('should support backspace while filtering', () => {
+      const component = createComponent([
+        { id: '1', label: 'Alpha' },
+        { id: '2', label: 'Beta' },
+      ]);
+
+      component.handleKey('a');
+      expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
+
+      const handled = component.handleKey('Backspace');
+      expect(handled).toBe(true);
+      expect(component.children.some((child: any) => child.content === 'Filter: ')).toBe(true);
+    });
+
+    it('should support Ctrl+W while filtering', () => {
+      const component = createComponent([
+        { id: '1', label: 'Alpha Beta Gamma' },
+      ]);
+
+      component.handleKey('A');
+      component.handleKey('l');
+      component.handleKey('p');
+      component.handleKey('h');
+      component.handleKey('a');
+      component.handleKey(' ');
+      component.handleKey('B');
+      component.handleKey('e');
+      component.handleKey('t');
+      component.handleKey('a');
+      expect(component.children.some((child: any) => child.content === 'Filter: Alpha Beta')).toBe(true);
+
+      const handled = component.handleKey('\u0017');
+      expect(handled).toBe(true);
+      expect(component.children.some((child: any) => child.content === 'Filter: Alpha ')).toBe(true);
+    });
+
+    it('should support Ctrl+U while filtering', () => {
+      const component = createComponent([{ id: '1', label: 'Alpha' }]);
+      component.handleKey('a');
+      component.handleKey('b');
+      expect(component.children.some((child: any) => child.content === 'Filter: ab')).toBe(true);
+
+      const handled = component.handleKey('\u0015');
+      expect(handled).toBe(true);
+      expect(component.children.some((child: any) => child.content === 'Filter: ')).toBe(true);
+    });
+
+    it('should show filter-specific instructions while filtering', () => {
+      const component = createComponent([{ id: '1', label: 'Alpha' }]);
+      component.handleKey('a');
+      const lastChild = component.children[component.children.length - 1];
+      expect(lastChild.content).toContain('Esc clears filter, then cancels');
+      expect(lastChild.content).toContain('Ctrl+W deletes word');
+      expect(lastChild.content).toContain('Ctrl+U clears filter');
     });
   });
 
