@@ -393,6 +393,32 @@ describe('LinearSelectorComponent (via renderer)', () => {
       expect(component.children.some((child: any) => child.content === 'Filter: a')).toBe(true);
     });
 
+    it('should keep original label when filter only matches description or id', () => {
+      const component = createComponent([
+        { id: 'alpha-1', label: 'Zeta', description: 'Matches query' },
+      ]);
+
+      component.handleKey('a');
+      component.handleKey('l');
+      component.handleKey('p');
+      component.handleKey('h');
+      component.handleKey('a');
+
+      expect(formatSelectorItem).toHaveBeenCalledWith(0, 'Zeta', true);
+    });
+
+    it('should highlight full consecutive match ranges', () => {
+      const component = createComponent([
+        { id: '1', label: 'Alpha' },
+      ]);
+
+      component.handleKey('A');
+      component.handleKey('l');
+      component.handleKey('p');
+
+      expect(formatSelectorItem).toHaveBeenLastCalledWith(0, '‹Alp›ha', true);
+    });
+
     it('should fuzzy filter and rank results', () => {
       const items = [
         { id: '1', label: 'Gamma Model' },
@@ -488,6 +514,31 @@ describe('LinearSelectorComponent (via renderer)', () => {
       expect(lastChild.content).toContain('Esc clears filter, then cancels');
       expect(lastChild.content).toContain('Ctrl+W deletes word');
       expect(lastChild.content).toContain('Ctrl+U clears filter');
+    });
+
+    it('should handle Enter and Space gracefully when there are no visible items', () => {
+      const onSelect = vi.fn();
+      const component = createComponent([{ id: '1', label: 'Alpha' }], onSelect);
+      component.handleKey('z');
+
+      expect(component.handleKey('Enter')).toBe(true);
+      expect(component.handleKey(' ')).toBe(true);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('should handle Space gracefully when filtering yields no visible items after whitespace input', () => {
+      const onSelect = vi.fn();
+      const component = createComponent([{ id: '1', label: 'Alpha' }], onSelect);
+      component.handleKey('z');
+      component.handleKey(' ');
+
+      expect(component.handleKey(' ')).toBe(true);
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('should return false for an unhandled non-editing key', () => {
+      const component = createComponent([{ id: '1', label: 'Alpha' }]);
+      expect(component.handleKey('Tab')).toBe(false);
     });
   });
 

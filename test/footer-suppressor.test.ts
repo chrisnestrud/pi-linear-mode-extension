@@ -156,6 +156,15 @@ describe('footer-suppressor extension', () => {
       expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/128k test-model]', 'info');
     });
 
+    it('should handle null context percent', async () => {
+      mockSession.getContextUsage.mockReturnValue({
+        contextWindow: 128,
+        percent: null,
+      });
+      await footerStatusHandler!({}, mockCtx);
+      expect(mockUi.notify).toHaveBeenCalledWith('[0.0%/128k test-model]', 'info');
+    });
+
     it('should handle string context percent without calling toFixed', async () => {
       mockSession.getContextUsage.mockReturnValue({
         contextWindow: 128,

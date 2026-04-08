@@ -53,15 +53,12 @@ describe('message-renderers extension', () => {
   });
   
   describe('renderContent', () => {
-    // We'll test the internal function by using one of the registered renderers
     it('should return string content as-is', () => {
       const renderer = registeredRenderers.get('linear-workflow/interaction');
       const message = { content: 'Hello world', details: {} };
-      // Temporarily mock formatting.formatCustomMessage to return content
       vi.mocked(formatting.formatCustomMessage).mockReturnValue('[Formatted]');
       const result = renderer(message, mockOptions, mockTheme);
       expect(result.content).toBe('[Formatted]');
-      // renderContent would have been called with 'Hello world'
     });
     
     it('should extract text from array content', () => {
@@ -75,9 +72,7 @@ describe('message-renderers extension', () => {
         details: {},
       };
       vi.mocked(formatting.formatCustomMessage).mockReturnValue('[Formatted]');
-      const result = renderer(message, mockOptions, mockTheme);
-      // The renderContent should have joined text lines
-      // formatting.formatCustomMessage will be called with the joined content
+      renderer(message, mockOptions, mockTheme);
       expect(formatting.formatCustomMessage).toHaveBeenCalledWith('linear-workflow/interaction', 'Line 1\nLine 2');
     });
     
@@ -124,7 +119,6 @@ describe('message-renderers extension', () => {
       mockOptions.expanded = true;
       vi.mocked(formatting.formatCustomMessage).mockReturnValue('[Hello]');
       const result = renderer(message, mockOptions, mockTheme);
-      // Should have called theme.fg with 'dim' and JSON string
       expect(mockTheme.fg).toHaveBeenCalledWith('dim', '{\n  "foo": "bar"\n}');
       expect(result.content).toBe('[Hello]\ndimmed');
     });
@@ -137,6 +131,16 @@ describe('message-renderers extension', () => {
       const result = renderer(message, mockOptions, mockTheme);
       expect(mockTheme.fg).not.toHaveBeenCalled();
       expect(result.content).toBe('[Hello]');
+    });
+
+    it('should register footer-status renderer that works when expanded', () => {
+      const renderer = registeredRenderers.get('footer-status');
+      const message = { content: 'Footer info', details: { tokens: 1 } };
+      mockOptions.expanded = true;
+      vi.mocked(formatting.formatCustomMessage).mockReturnValue('[Footer: Footer info]');
+      const result = renderer(message, mockOptions, mockTheme);
+      expect(formatting.formatCustomMessage).toHaveBeenCalledWith('footer-status', 'Footer info');
+      expect(result.content).toBe('[Footer: Footer info]\ndimmed');
     });
   });
 });

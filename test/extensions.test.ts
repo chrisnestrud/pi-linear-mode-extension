@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 
 // Import all extensions
-import tuiCompat from '../src/extensions/tui-compat.ts';
 import toolRenderers from '../src/extensions/tool-renderers.ts';
 import messageRenderers from '../src/extensions/message-renderers.ts';
 import selectorRenderer from '../src/extensions/selector-renderer.ts';
@@ -29,11 +28,6 @@ describe('extension registration', () => {
     vi.clearAllMocks();
   });
   
-  it('tuiCompat should register without error', () => {
-    expect(() => tuiCompat(mockPi)).not.toThrow();
-    expect(mockPi.on).toHaveBeenCalled();
-  });
-
   it('toolRenderers should register without error', () => {
     expect(() => toolRenderers(mockPi)).not.toThrow();
     expect(mockPi.registerTool).toHaveBeenCalled();

@@ -140,6 +140,21 @@ describe('working-message-modifier extension', () => {
       await handler!({}, mockCtx);
       expect(mockClearTimeout).toHaveBeenCalledTimes(1);
     });
+
+    it('should not warn when timeout fires after message is already inactive', async () => {
+      const handler = eventHandlers.get('turn_start');
+      await handler!({}, mockCtx);
+
+      const callbacks = (mockSetTimeout as any).callbacks;
+      const timeoutId = Array.from(callbacks.keys())[0];
+      const timeoutEntry = callbacks.get(timeoutId);
+      expect(timeoutEntry).toBeDefined();
+
+      await eventHandlers.get('agent_end')!({}, mockCtx);
+      timeoutEntry.callback();
+
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
     
     it('should trigger timeout after 2 minutes', async () => {
       const handler = eventHandlers.get('turn_start');
