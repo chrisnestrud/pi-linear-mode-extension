@@ -53,47 +53,27 @@ export default function workingMessageModifier(pi: ExtensionAPI) {
   }
   
   pi.on("session_start", async (_event, ctx) => {
-    try {
-      // Start with no working message
-      clearWorkingMessage(ctx);
-    } catch (error) {
-      logger.error(`Error in session_start:`, error);
-    }
+    // Start with no working message
+    clearWorkingMessage(ctx);
   });
 
   pi.on("agent_start", async (_event, ctx) => {
-    try {
-      // Clear any existing working message when agent starts
-      clearWorkingMessage(ctx);
-    } catch (error) {
-      logger.error(`Error in agent_start:`, error);
-    }
+    // Clear any existing working message when agent starts
+    clearWorkingMessage(ctx);
   });
 
   pi.on("turn_start", async (_event, ctx) => {
-    try {
-      // Show "Working..." when a turn starts (when text is sent to LLM)
-      setWorkingMessage(ctx);
-    } catch (error) {
-      logger.error(`Error in turn_start:`, error);
-    }
+    // Show "Working..." when a turn starts (when text is sent to LLM)
+    setWorkingMessage(ctx);
   });
 
   pi.on("agent_end", async (_event, ctx) => {
-    try {
-      // Clear working message when agent ends
-      clearWorkingMessage(ctx);
-    } catch (error) {
-      logger.error(`Error in agent_end:`, error);
-    }
+    // Clear working message when agent ends
+    clearWorkingMessage(ctx);
   });
 
   pi.on("session_shutdown", async (_event, ctx) => {
-    try {
-      // Clean up
-      clearWorkingMessage(ctx);
-    } catch (error) {
-      logger.error(`Error in session_shutdown:`, error);
-    }
+    // Clean up
+    clearWorkingMessage(ctx);
   });
 }

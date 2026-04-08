@@ -241,6 +241,28 @@ describe('tool-renderers extension', () => {
       expect(component.content).toContain('done');
       expect(component.content).not.toContain('truncated');
     });
+
+    it('should handle missing capture group in exit code regex', () => {
+      // This tests the ?? "0" fallback in line 92
+      const tool = getTool('bash');
+      const output = 'exit code: '; // No number after colon
+      // Mock match to return array with missing capture group
+      const originalMatch = String.prototype.match;
+      const mockMatch = vi.fn().mockReturnValue(['exit code: ', undefined]);
+      String.prototype.match = mockMatch;
+      try {
+        const result = {
+          content: [{ type: 'text' as const, text: output }],
+          details: undefined,
+        };
+        const component = tool.renderResult(result, { isPartial: false }, {}, {});
+        // Should not crash, exitCode should be 0 (default)
+        expect(mockMatch).toHaveBeenCalled();
+        expect(component.content).toContain('done');
+      } finally {
+        String.prototype.match = originalMatch;
+      }
+    });
   });
   
   describe('write tool', () => {

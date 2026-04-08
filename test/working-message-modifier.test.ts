@@ -191,12 +191,7 @@ describe('working-message-modifier extension', () => {
       );
     });
     
-    it('should log error if event handler throws', async () => {
-      // Simulate an error in the event handler itself
-      // But our handlers have try-catch, so we need to cause error inside
-      // We'll mock clearWorkingMessage to throw
-      // Actually we already tested that. Let's test that logger.error is called for each event.
-      // We'll just verify that logger.error is mocked.
-    });
   });
+
+
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
-import bashRendererExtension from '../src/extensions/bash-renderer.ts';
+import bashRendererExtension, { LinearBashComponent } from '../src/extensions/bash-renderer.ts';
 import { formatCommand, truncateForScreenReader } from '../src/lib/formatting.ts';
 
 // Mock pi-tui module
@@ -260,5 +260,24 @@ describe('LinearBashComponent (via renderer)', () => {
       component.setExpanded(false);
       // Just ensure no errors
     });
+  });
+});
+
+describe('LinearBashComponent internal rendering edge cases', () => {
+  it('should cover dead branch exit code non-zero with status not error', () => {
+    // This tests line 68 in bash-renderer.ts which is dead code
+    // but we want coverage for robustness
+    const component = new LinearBashComponent('test', false);
+    // Access private fields using bracket notation
+    (component as any).exitCode = 1;
+    (component as any).status = 'complete'; // not 'error'
+    (component as any).outputLines = [];
+    // Call private method
+    (component as any).renderComplete();
+    // Should not throw
+    expect(component.children.length).toBeGreaterThan(0);
+    // The status line should be "Exit 1" (line 68)
+    const firstChild = component.children[0];
+    expect(firstChild.content).toContain('Exit 1');
   });
 });

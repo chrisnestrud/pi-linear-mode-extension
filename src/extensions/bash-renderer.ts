@@ -23,7 +23,7 @@ type TruncationResult = any;
  * - Shows command, status, and optional output preview
  * - Accessibility focused: static text instead of visual animations
  */
-class LinearBashComponent extends Container implements BashComponent {
+export class LinearBashComponent extends Container implements BashComponent {
   private command: string;
   private excludeFromContext: boolean;
   private outputLines: string[] = [];
