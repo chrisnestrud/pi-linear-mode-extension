@@ -16,6 +16,7 @@ describe('working-message-modifier extension', () => {
   let eventHandlers: Map<string, Function>;
   let mockCtx: any;
   let mockSetWorkingMessage: vi.Mock;
+  let mockSetWidget: vi.Mock;
   let mockClearTimeout: vi.Mock;
   let mockSetTimeout: vi.Mock;
   
@@ -23,9 +24,11 @@ describe('working-message-modifier extension', () => {
     vi.useFakeTimers();
     eventHandlers = new Map();
     mockSetWorkingMessage = vi.fn();
+    mockSetWidget = vi.fn();
     mockCtx = {
       ui: {
         setWorkingMessage: mockSetWorkingMessage,
+        setWidget: mockSetWidget,
       },
     };
     
@@ -78,6 +81,7 @@ describe('working-message-modifier extension', () => {
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
     expect(mockSetWorkingMessage).toHaveBeenCalledWith(''); // explicit empty string
+    expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
     // clearTimeout not called because workingMessageTimeout is null initially
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
@@ -87,6 +91,7 @@ describe('working-message-modifier extension', () => {
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
     expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
+    expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
   
@@ -94,7 +99,12 @@ describe('working-message-modifier extension', () => {
     const handler = eventHandlers.get('turn_start');
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
-    expect(mockSetWorkingMessage).toHaveBeenCalledWith('[Working...]');
+    expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
+    expect(mockSetWidget).toHaveBeenCalledWith(
+      'pi-linear-mode-working-message',
+      ['[Working...]'],
+      { placement: 'belowEditor' }
+    );
     // Should set a timeout
     expect(mockSetTimeout).toHaveBeenCalledWith(expect.any(Function), 2 * 60 * 1000);
     // clearTimeout not called because workingMessageTimeout is null initially
@@ -106,6 +116,7 @@ describe('working-message-modifier extension', () => {
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
     expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
+    expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
     // clearTimeout not called because no timeout set yet
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
@@ -115,6 +126,7 @@ describe('working-message-modifier extension', () => {
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
     expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
+    expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
   
@@ -141,6 +153,7 @@ describe('working-message-modifier extension', () => {
       timeoutEntry.callback();
       // Should clear working message
       expect(mockSetWorkingMessage).toHaveBeenCalledWith(''); // cleared
+      expect(mockSetWidget).toHaveBeenCalledWith('pi-linear-mode-working-message', undefined);
       expect(logger.warn).toHaveBeenCalledWith(
         'Working message timeout after 2 minutes'
       );
@@ -184,6 +197,30 @@ describe('working-message-modifier extension', () => {
         throw new Error('Clear error');
       });
       const handler = eventHandlers.get('session_start');
+      await handler!({}, mockCtx);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error clearing working message:',
+        expect.any(Error)
+      );
+    });
+
+    it('should log error if setWidget throws while setting working message', async () => {
+      mockCtx.ui.setWidget = vi.fn(() => {
+        throw new Error('Widget error');
+      });
+      const handler = eventHandlers.get('turn_start');
+      await handler!({}, mockCtx);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Error setting working message:',
+        expect.any(Error)
+      );
+    });
+
+    it('should log error if setWidget throws while clearing working message', async () => {
+      mockCtx.ui.setWidget = vi.fn(() => {
+        throw new Error('Widget clear error');
+      });
+      const handler = eventHandlers.get('agent_end');
       await handler!({}, mockCtx);
       expect(logger.error).toHaveBeenCalledWith(
         'Error clearing working message:',

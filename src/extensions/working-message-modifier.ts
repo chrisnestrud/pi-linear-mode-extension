@@ -13,13 +13,21 @@ import { logger } from "../lib/logger.ts";
 export default function workingMessageModifier(pi: ExtensionAPI) {
   // Use a simple static message with brackets
   const workingMessage = "[Working...]";
+  const workingWidgetKey = "pi-linear-mode-working-message";
   
   let workingMessageActive = false;
   let workingMessageTimeout: NodeJS.Timeout | null = null;
   
   function setWorkingMessage(ctx: any) {
     try {
-      ctx.ui.setWorkingMessage(workingMessage);
+      // Suppress pi's built-in loader/spinner entirely.
+      // In pi core, an empty string hides the loader, while any non-empty string
+      // still renders the animated braille spinner.
+      ctx.ui.setWorkingMessage("");
+      // Show a static, screen-reader-friendly replacement instead.
+      // Place it below the editor so it behaves more like a transient status line
+      // than persistent header content.
+      ctx.ui.setWidget(workingWidgetKey, [workingMessage], { placement: "belowEditor" });
       workingMessageActive = true;
       
       // Safety timeout: clear working message after 2 minutes if not cleared
@@ -39,7 +47,9 @@ export default function workingMessageModifier(pi: ExtensionAPI) {
   
   function clearWorkingMessage(ctx: any) {
     try {
-      ctx.ui.setWorkingMessage(""); // Restore default without passing undefined
+      // Keep the built-in loader hidden so the animated spinner never appears.
+      ctx.ui.setWorkingMessage("");
+      ctx.ui.setWidget(workingWidgetKey, undefined);
       workingMessageActive = false;
       
       // Clear timeout if set
