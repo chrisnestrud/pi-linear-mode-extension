@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
-import abortMarker from '../src/extensions/abort-marker.ts';
+import abortMarker, { fingerprintFromMessage, maybePersistAbortMarker } from '../src/extensions/abort-marker.ts';
 import { state } from '../src/lib/state.ts';
 
 describe('abort-marker extension', () => {
@@ -110,5 +110,61 @@ describe('abort-marker extension', () => {
     };
     handler(event);
     expect(mockPi.sendMessage).toHaveBeenCalled();
+  });
+
+  describe('abort-marker utilities', () => {
+    let mockPi: ExtensionAPI;
+
+    beforeEach(() => {
+      mockPi = { sendMessage: vi.fn() } as unknown as ExtensionAPI;
+      state.lastAbortFingerprint = undefined;
+    });
+
+    describe('fingerprintFromMessage', () => {
+      it('should create fingerprint with timestamp and errorMessage', () => {
+        expect(fingerprintFromMessage({ timestamp: 123, errorMessage: 'cancelled' }))
+          .toBe('123:cancelled');
+        expect(fingerprintFromMessage({ timestamp: 0, errorMessage: 'aborted' }))
+          .toBe('0:aborted');
+      });
+
+      it('should handle missing fields', () => {
+        expect(fingerprintFromMessage({})).toBe('0:aborted');
+        expect(fingerprintFromMessage({ timestamp: 456 })).toBe('456:aborted');
+        expect(fingerprintFromMessage({ errorMessage: 'custom' })).toBe('0:custom');
+      });
+    });
+
+    describe('maybePersistAbortMarker', () => {
+      it('should return early if role is not assistant', () => {
+        maybePersistAbortMarker(mockPi, { role: 'user', stopReason: 'aborted' });
+        expect(mockPi.sendMessage).not.toHaveBeenCalled();
+      });
+
+      it('should return early if stopReason is not aborted', () => {
+        maybePersistAbortMarker(mockPi, { role: 'assistant', stopReason: 'stop' });
+        expect(mockPi.sendMessage).not.toHaveBeenCalled();
+      });
+
+      it('should send message for aborted assistant', () => {
+        maybePersistAbortMarker(mockPi, { role: 'assistant', stopReason: 'aborted', timestamp: 123, errorMessage: 'cancelled' });
+        expect(mockPi.sendMessage).toHaveBeenCalledWith({
+          customType: 'linear-workflow/abort',
+          content: 'Operation aborted',
+          display: true,
+          details: expect.objectContaining({
+            timestamp: expect.any(String),
+            source: 'ctrl+c',
+          }),
+        });
+      });
+
+      it('should not send duplicate for same fingerprint', () => {
+        maybePersistAbortMarker(mockPi, { role: 'assistant', stopReason: 'aborted', timestamp: 123 });
+        expect(mockPi.sendMessage).toHaveBeenCalledTimes(1);
+        maybePersistAbortMarker(mockPi, { role: 'assistant', stopReason: 'aborted', timestamp: 123 });
+        expect(mockPi.sendMessage).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 });

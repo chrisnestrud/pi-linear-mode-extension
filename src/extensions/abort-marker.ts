@@ -1,11 +1,11 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { state } from "../lib/state.ts";
 
-function fingerprintFromMessage(message: { timestamp?: number; errorMessage?: string }): string {
+export function fingerprintFromMessage(message: { timestamp?: number; errorMessage?: string }): string {
   return `${message.timestamp ?? 0}:${message.errorMessage ?? "aborted"}`;
 }
 
-function maybePersistAbortMarker(
+export function maybePersistAbortMarker(
   pi: ExtensionAPI,
   message: { role?: string; stopReason?: string; timestamp?: number; errorMessage?: string },
 ): void {
