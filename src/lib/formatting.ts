@@ -1,7 +1,7 @@
 /**
  * Formatting utilities for linear-mode extensions.
  * Provides consistent formatting for screen reader accessibility.
- * 
+ *
  * Principles:
  * 1. Use `[` and `]` to mark UI/system lines (differentiates from LLM/tool output)
  * 2. Minimize blank lines
@@ -90,21 +90,12 @@ export function formatCustomMessage(type: string, content: string): string {
  * Returns true for major section changes
  */
 export function needsSpacerBefore(previousType: string, currentType: string): boolean {
-  // Major transitions need spacers
   const transitions = [
     ["tool_result", "tool_call"],
     ["assistant_message", "tool_call"],
     ["user_message", "tool_call"],
     ["custom_message", "tool_call"],
   ];
-  
-  return transitions.some(([prev, curr]) => prev === previousType && curr === currentType);
-}
 
-/**
- * Truncate text for screen readers (avoid overly long lines)
- */
-export function truncateForScreenReader(text: string, maxLength: number = 80): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + "...";
+  return transitions.some(([prev, curr]) => prev === previousType && curr === currentType);
 }

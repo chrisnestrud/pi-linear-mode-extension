@@ -7,7 +7,6 @@ import {
   formatToolResult,
   formatSelectorItem,
   formatCustomMessage,
-  truncateForScreenReader,
   needsSpacerBefore,
 } from '../src/lib/formatting.ts';
 
@@ -113,35 +112,10 @@ describe('formatting utilities', () => {
     });
 
     it('handles edge cases', () => {
-      // empty type
       expect(formatCustomMessage('', 'Message')).toBe('[Message: Message]');
-      // type with trailing slash
       expect(formatCustomMessage('linear-workflow/', 'Message')).toBe('[Message: Message]');
-      // type with multiple slashes
       expect(formatCustomMessage('a/b/c', 'Message')).toBe('[c: Message]');
-      // single slash
       expect(formatCustomMessage('/', 'Message')).toBe('[Message: Message]');
-    });
-  });
-
-  describe('truncateForScreenReader', () => {
-    it('does not truncate short text', () => {
-      const short = 'Short text';
-      expect(truncateForScreenReader(short)).toBe(short);
-      expect(truncateForScreenReader(short, 5)).toBe('Sh...'); // Truncates because 10 > 5
-    });
-
-    it('truncates long text', () => {
-      const long = 'This is a very long line that should be truncated for screen readers';
-      expect(truncateForScreenReader(long, 30)).toBe('This is a very long line th...');
-      expect(truncateForScreenReader(long, 20)).toBe('This is a very lo...');
-    });
-
-    it('uses default maxLength of 80', () => {
-      const exactly80 = 'x'.repeat(80);
-      const longer = 'x'.repeat(81);
-      expect(truncateForScreenReader(exactly80)).toBe(exactly80);
-      expect(truncateForScreenReader(longer)).toBe('x'.repeat(77) + '...');
     });
   });
 

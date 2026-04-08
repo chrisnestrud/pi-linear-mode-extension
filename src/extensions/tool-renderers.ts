@@ -7,26 +7,67 @@ import type {
   LsToolDetails,
   ReadToolDetails,
 } from "@mariozechner/pi-coding-agent";
-import { createBashTool, createEditTool, createFindTool, createGrepTool, createLsTool, createReadTool, createWriteTool } from "@mariozechner/pi-coding-agent";
+import {
+  createBashTool,
+  createEditTool,
+  createFindTool,
+  createGrepTool,
+  createLsTool,
+  createReadTool,
+  createWriteTool,
+  keyHint,
+} from "@mariozechner/pi-coding-agent";
 import { Text } from "@mariozechner/pi-tui";
-import { formatToolCall, formatToolResult, truncateForScreenReader } from "../lib/formatting.ts";
+import { formatStatus, formatToolCall } from "../lib/formatting.ts";
 
-function renderPreview(lines: string[], limit: number, suffix: string): string {
-  const visible = lines.slice(0, limit);
-  let text = visible.join("\n");
-  // Only add suffix if there are lines not shown
-  if (lines.length > limit) {
-    text += `\n${suffix}`;
+function emptyCallComponent(): Text {
+  return new Text("", 0, 0);
+}
+
+function buildCollapsedHint(hiddenCount: number, hiddenLabel: string): string {
+  return `... (${hiddenCount} more ${hiddenLabel}, ${keyHint("app.tools.expand", "to expand")})`;
+}
+
+function buildExpandedHint(): string {
+  return `[${keyHint("app.tools.expand", "to collapse")}]`;
+}
+
+function renderContentBlock(
+  statusLine: string,
+  callLine: string,
+  lines: string[],
+  limit: number,
+  hiddenLabel: string,
+  expanded: boolean,
+): string {
+  const parts: string[] = [formatStatus(statusLine), callLine];
+
+  if (lines.length === 0) {
+    return parts.join("\n");
   }
-  return text;
+
+  const visibleLines = expanded ? lines : lines.slice(0, limit);
+  parts.push(...visibleLines);
+
+  if (expanded && lines.length > limit) {
+    parts.push(buildExpandedHint());
+  } else if (!expanded && lines.length > limit) {
+    parts.push(buildCollapsedHint(lines.length - limit, hiddenLabel));
+  }
+
+  return parts.join("\n");
 }
 
-function renderDiffPreview(diffText: string, limit: number): string {
-  const rawLines = diffText.split("\n");
-  const visibleLines = rawLines.filter((line) => !line.startsWith("---") && !line.startsWith("+++") && !line.startsWith("@@"));
-  return renderPreview(visibleLines, limit, `... ${visibleLines.length - limit} more diff lines`);
+function nonEmptyLines(text: string): string[] {
+  return text.split("\n").filter((line) => line.length > 0);
 }
 
+function visibleDiffLines(diffText: string): string[] {
+  return diffText
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .filter((line) => !line.startsWith("---") && !line.startsWith("+++") && !line.startsWith("@@"));
+}
 
 export default function toolRenderers(pi: ExtensionAPI) {
   const cwd = process.cwd();
@@ -40,31 +81,27 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return readTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      return new Text(formatToolCall("read", args), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, _theme, _context) {
-      if (isPartial) return new Text("[reading...]", 0, 0);
+    renderResult(result, { isPartial, expanded }, _theme, context) {
+      const callLine = formatToolCall("read", context?.args ?? {});
+      if (isPartial) {
+        return new Text(`${formatStatus("Reading...")}\n${callLine}`, 0, 0);
+      }
 
       const details = result.details as ReadToolDetails | undefined;
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(formatToolResult("read complete"), 0, 0);
+        return new Text(`${formatStatus("Read complete")}\n${callLine}`, 0, 0);
       }
 
       const lines = content.text.split("\n");
-      const truncated = details?.truncation?.truncated ? ` (truncated from ${details.truncation.totalLines} lines)` : "";
-      let text = `${lines.length} lines${truncated}`;
+      const status = details?.truncation?.truncated
+        ? `Done (${lines.length} lines, truncated from ${details.truncation.totalLines})`
+        : `Done (${lines.length} lines)`;
 
-      // Always show some output preview (like pi's default behavior)
-      const limit = 8; // Reduced for screen readers
-      if (lines.some((line) => line.length > 0)) {
-        // Truncate lines for screen readers
-        const truncatedLines = lines.map(line => truncateForScreenReader(line));
-        text += `\n${renderPreview(truncatedLines, limit, `... ${lines.length - limit} more lines`)}`;
-      }
-
-      return new Text(formatToolResult(text), 0, 0);
+      return new Text(renderContentBlock(status, callLine, lines, 8, "lines", !!expanded), 0, 0);
     },
   });
 
@@ -77,38 +114,35 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return bashTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      const command = args.command.length > 100 ? `${args.command.slice(0, 97)}...` : args.command;
-      return new Text(formatToolCall("bash", { command, excludeFromContext: false }), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, theme, _context) {
-      if (isPartial) return new Text("[running...]", 0, 0);
+    renderResult(result, { isPartial, expanded }, _theme, context) {
+      const toolArgs = context?.args ?? {};
+      const callLine = formatToolCall("bash", {
+        command: toolArgs.command ?? "",
+        excludeFromContext: toolArgs.excludeFromContext || false,
+      });
+      if (isPartial) {
+        return new Text(`${formatStatus("Running...")}\n${callLine}`, 0, 0);
+      }
 
       const details = result.details as BashToolDetails | undefined;
       const content = result.content[0];
       const output = content?.type === "text" ? content.text : "";
-      const lines = output.split("\n").filter((line) => line.length > 0);
+      const lines = nonEmptyLines(output);
       const exitMatch = output.match(/exit code: (\d+)/);
       const exitCode = exitMatch ? Number.parseInt(exitMatch[1] ?? "0", 10) : null;
-      
-      // Build status line
-      let text = exitCode && exitCode !== 0 ? `exit ${exitCode}` : "done";
+
+      let status = exitCode && exitCode !== 0 ? `Exit ${exitCode}` : "Done";
       if (lines.length > 0) {
-        text += ` (${lines.length} line${lines.length === 1 ? '' : 's'})`;
+        status += ` (${lines.length} line${lines.length === 1 ? "" : "s"})`;
       }
       if (details?.truncation?.truncated) {
-        text += ` [truncated from ${details.truncation.totalLines} lines]`;
+        status += ` [truncated from ${details.truncation.totalLines} lines]`;
       }
 
-      // Show output preview
-      const limit = 6; // Reduced for screen readers
-      if (lines.length > 0) {
-        // Truncate lines for screen readers
-        const truncatedLines = lines.map(line => truncateForScreenReader(line));
-        text += `\n${renderPreview(truncatedLines, limit, `... ${lines.length - limit} more lines`)}`;
-      }
-
-      return new Text(formatToolResult(text), 0, 0);
+      return new Text(renderContentBlock(status, callLine, lines, 6, "lines", !!expanded), 0, 0);
     },
   });
 
@@ -121,12 +155,13 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return writeTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      return new Text(formatToolCall("write", args), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, _theme, _context) {
-      if (isPartial) return new Text("[writing...]", 0, 0);
-      return new Text(formatToolResult("written"), 0, 0);
+    renderResult(_result, { isPartial }, _theme, context) {
+      const callLine = formatToolCall("write", context?.args ?? {});
+      const statusLine = isPartial ? "Writing..." : "Done";
+      return new Text(`${formatStatus(statusLine)}\n${callLine}`, 0, 0);
     },
   });
 
@@ -139,29 +174,24 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return editTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      return new Text(formatToolCall("edit", args), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, _theme, _context) {
-      if (isPartial) return new Text("[editing...]", 0, 0);
+    renderResult(result, { isPartial, expanded }, _theme, context) {
+      const callLine = formatToolCall("edit", context?.args ?? {});
+      if (isPartial) {
+        return new Text(`${formatStatus("Editing...")}\n${callLine}`, 0, 0);
+      }
 
-      const details = result.details as EditToolDetails | undefined;
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(formatToolResult("edit complete"), 0, 0);
+        return new Text(`${formatStatus("Edit complete")}\n${callLine}`, 0, 0);
       }
 
-      const diffText = content.text;
-      const lines = diffText.split("\n").filter((line) => line.length > 0);
-      let text = `${lines.length} diff lines`;
-
-      // Show diff preview
-      const limit = 6; // Reduced for screen readers
-      if (lines.length > 0) {
-        text += `\n${renderDiffPreview(diffText, limit)}`;
-      }
-
-      return new Text(formatToolResult(text), 0, 0);
+      const diffLines = visibleDiffLines(content.text);
+      const allLines = nonEmptyLines(content.text);
+      const status = `Done (${allLines.length} diff lines)`;
+      return new Text(renderContentBlock(status, callLine, diffLines, 6, "diff lines", !!expanded), 0, 0);
     },
   });
 
@@ -174,31 +204,23 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return findTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      return new Text(formatToolCall("find", args), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, _theme, _context) {
-      if (isPartial) return new Text("[finding...]", 0, 0);
+    renderResult(result, { isPartial, expanded }, _theme, context) {
+      const callLine = formatToolCall("find", context?.args ?? {});
+      if (isPartial) {
+        return new Text(`${formatStatus("Finding...")}\n${callLine}`, 0, 0);
+      }
 
-      const details = result.details as FindToolDetails | undefined;
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(formatToolResult("find complete"), 0, 0);
+        return new Text(`${formatStatus("Find complete")}\n${callLine}`, 0, 0);
       }
 
-      const output = content.text;
-      const lines = output.split("\n").filter((line) => line.length > 0);
-      let text = `${lines.length} matches`;
-
-      // Show preview
-      const limit = 8; // Reduced for screen readers
-      if (lines.length > 0) {
-        // Truncate lines for screen readers
-        const truncatedLines = lines.map(line => truncateForScreenReader(line));
-        text += `\n${renderPreview(truncatedLines, limit, `... ${lines.length - limit} more matches`)}`;
-      }
-
-      return new Text(formatToolResult(text), 0, 0);
+      const lines = nonEmptyLines(content.text);
+      const status = `Done (${lines.length} matches)`;
+      return new Text(renderContentBlock(status, callLine, lines, 8, "matches", !!expanded), 0, 0);
     },
   });
 
@@ -211,31 +233,23 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return grepTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      return new Text(formatToolCall("grep", args), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, _theme, _context) {
-      if (isPartial) return new Text("[grepping...]", 0, 0);
+    renderResult(result, { isPartial, expanded }, _theme, context) {
+      const callLine = formatToolCall("grep", context?.args ?? {});
+      if (isPartial) {
+        return new Text(`${formatStatus("Grepping...")}\n${callLine}`, 0, 0);
+      }
 
-      const details = result.details as GrepToolDetails | undefined;
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(formatToolResult("grep complete"), 0, 0);
+        return new Text(`${formatStatus("Grep complete")}\n${callLine}`, 0, 0);
       }
 
-      const output = content.text;
-      const lines = output.split("\n").filter((line) => line.length > 0);
-      let text = `${lines.length} matches`;
-
-      // Show preview
-      const limit = 8; // Reduced for screen readers
-      if (lines.length > 0) {
-        // Truncate lines for screen readers
-        const truncatedLines = lines.map(line => truncateForScreenReader(line));
-        text += `\n${renderPreview(truncatedLines, limit, `... ${lines.length - limit} more matches`)}`;
-      }
-
-      return new Text(formatToolResult(text), 0, 0);
+      const lines = nonEmptyLines(content.text);
+      const status = `Done (${lines.length} matches)`;
+      return new Text(renderContentBlock(status, callLine, lines, 8, "matches", !!expanded), 0, 0);
     },
   });
 
@@ -248,31 +262,23 @@ export default function toolRenderers(pi: ExtensionAPI) {
     async execute(toolCallId, params, signal, onUpdate) {
       return lsTool.execute(toolCallId, params, signal, onUpdate);
     },
-    renderCall(args, _theme, _context) {
-      return new Text(formatToolCall("ls", args), 0, 0);
+    renderCall() {
+      return emptyCallComponent();
     },
-    renderResult(result, { isPartial }, _theme, _context) {
-      if (isPartial) return new Text("[listing...]", 0, 0);
+    renderResult(result, { isPartial, expanded }, _theme, context) {
+      const callLine = formatToolCall("ls", context?.args ?? {});
+      if (isPartial) {
+        return new Text(`${formatStatus("Listing...")}\n${callLine}`, 0, 0);
+      }
 
-      const details = result.details as LsToolDetails | undefined;
       const content = result.content[0];
       if (content?.type !== "text") {
-        return new Text(formatToolResult("ls complete"), 0, 0);
+        return new Text(`${formatStatus("List complete")}\n${callLine}`, 0, 0);
       }
 
-      const output = content.text;
-      const lines = output.split("\n").filter((line) => line.length > 0);
-      let text = `${lines.length} items`;
-
-      // Show preview
-      const limit = 10; // Reduced for screen readers
-      if (lines.length > 0) {
-        // Truncate lines for screen readers
-        const truncatedLines = lines.map(line => truncateForScreenReader(line));
-        text += `\n${renderPreview(truncatedLines, limit, `... ${lines.length - limit} more items`)}`;
-      }
-
-      return new Text(formatToolResult(text), 0, 0);
+      const lines = nonEmptyLines(content.text);
+      const status = `Done (${lines.length} items)`;
+      return new Text(renderContentBlock(status, callLine, lines, 10, "items", !!expanded), 0, 0);
     },
   });
 }
