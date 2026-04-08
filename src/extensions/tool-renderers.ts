@@ -27,31 +27,6 @@ function renderDiffPreview(diffText: string, limit: number): string {
   return renderPreview(visibleLines, limit, `... ${visibleLines.length - limit} more diff lines`);
 }
 
-function renderPlainTextResult(
-  output: string,
-  options: {
-    compactPreviewLines?: number;
-    verbosePreviewLines?: number;
-    truncated?: boolean;
-    truncatedSuffix?: string;
-  } = {},
-): string {
-  const rawLines = output.split("\n");
-  const lines = rawLines.filter((line) => line.length > 0);
-  let text = `${lines.length} lines`;
-  if (options.truncated) {
-    text += options.truncatedSuffix ? ` ${options.truncatedSuffix}` : " [truncated]";
-  }
-
-  // Always show some output preview (like pi's default behavior)
-  const limit = options.verbosePreviewLines ?? 8; // Reduced for screen readers
-  if (lines.length > 0) {
-    // Truncate lines for screen readers
-    const truncatedLines = lines.map(line => truncateForScreenReader(line));
-    text += `\n${renderPreview(truncatedLines, limit, `... ${lines.length - limit} more lines`)}`;
-  }
-  return text;
-}
 
 export default function toolRenderers(pi: ExtensionAPI) {
   const cwd = process.cwd();
