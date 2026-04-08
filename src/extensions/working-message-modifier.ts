@@ -39,7 +39,7 @@ export default function workingMessageModifier(pi: ExtensionAPI) {
   
   function clearWorkingMessage(ctx: any) {
     try {
-      ctx.ui.setWorkingMessage(); // Restore default (empty)
+      ctx.ui.setWorkingMessage(""); // Restore default without passing undefined
       workingMessageActive = false;
       
       // Clear timeout if set

@@ -77,7 +77,7 @@ describe('working-message-modifier extension', () => {
     const handler = eventHandlers.get('session_start');
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
-    expect(mockSetWorkingMessage).toHaveBeenCalledWith(); // no argument
+    expect(mockSetWorkingMessage).toHaveBeenCalledWith(''); // explicit empty string
     // clearTimeout not called because workingMessageTimeout is null initially
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
@@ -86,7 +86,7 @@ describe('working-message-modifier extension', () => {
     const handler = eventHandlers.get('agent_start');
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
-    expect(mockSetWorkingMessage).toHaveBeenCalledWith();
+    expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
   
@@ -105,7 +105,7 @@ describe('working-message-modifier extension', () => {
     const handler = eventHandlers.get('agent_end');
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
-    expect(mockSetWorkingMessage).toHaveBeenCalledWith();
+    expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
     // clearTimeout not called because no timeout set yet
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
@@ -114,7 +114,7 @@ describe('working-message-modifier extension', () => {
     const handler = eventHandlers.get('session_shutdown');
     expect(handler).toBeDefined();
     await handler!({}, mockCtx);
-    expect(mockSetWorkingMessage).toHaveBeenCalledWith();
+    expect(mockSetWorkingMessage).toHaveBeenCalledWith('');
     expect(mockClearTimeout).not.toHaveBeenCalled();
   });
   
@@ -140,7 +140,7 @@ describe('working-message-modifier extension', () => {
       // Manually call the callback
       timeoutEntry.callback();
       // Should clear working message
-      expect(mockSetWorkingMessage).toHaveBeenCalledWith(); // cleared
+      expect(mockSetWorkingMessage).toHaveBeenCalledWith(''); // cleared
       expect(logger.warn).toHaveBeenCalledWith(
         'Working message timeout after 2 minutes'
       );
